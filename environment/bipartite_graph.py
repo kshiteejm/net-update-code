@@ -6,7 +6,7 @@ import sys
 
 class BipartiteGraph():
     def __init__(self, num_u_nodes, num_v_nodes):
-        self.bi_graph = bipartite.random_graph(num_u_nodes, num_v_nodes, 0.2)
+        self.bi_graph = bipartite.random_graph(num_u_nodes, num_v_nodes, 0.4)
         self.u_nodes = {n for n, d in self.bi_graph.nodes(data=True) if d['bipartite']==0}
         self.v_nodes = set(self.bi_graph) - self.u_nodes
         self.u_nodes = list(self.u_nodes)
@@ -35,7 +35,7 @@ class BipartiteGraph():
 
     def v_node_feats(self):
         v_node_feats = []
-        for node in self.u_nodes:
+        for node in self.v_nodes:
             v_node_feats.append(self.bi_graph.nodes[node]['node_feats'])
         return np.array(v_node_feats)
 
@@ -53,15 +53,24 @@ class BipartiteGraph():
         u_nodes = list(self.u_nodes)
         v_nodes = list(self.v_nodes)
         fair_bw = np.zeros(len(v_nodes))
-
-        u_capacities = dict()
-        u_flows = dict()
-        for node in u_nodes: 
-            u_capacities[node] = self.bi_graph.nodes[node]['node_feats'][0]
-            u_capacities[node] = self.bi_graph.nodes[node]['node_feats'][1]
-
         v_saturated_flows = set()
         u_completed_links = set()
+        u_capacities = dict()
+        u_flows = dict()
+
+        u_vacuous_links = []
+        for node in u_nodes:
+            capacity = self.bi_graph.nodes[node]['node_feats'][0]
+            num_flows = self.bi_graph.nodes[node]['node_feats'][1]
+            if num_flows == 0:
+                u_vacuous_links.append(node)
+                continue
+            u_capacities[node] = capacity
+            u_flows[node] = num_flows
+        for node in u_vacuous_links:
+            u_nodes.remove(node)
+            u_completed_links.add(node)
+
         while len(u_nodes) != 0 and len(v_nodes) != 0:
             min_u_node = None
             min_bottleneck_bw = sys.maxsize
