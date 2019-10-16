@@ -89,7 +89,7 @@ class BipartiteGraph():
                     if u_flows[node_u] == 0:
                         u_nodes.remove(node_u)
                         u_completed_links.add(node_u)
-                fair_bw[self.v_nodes.index(node)] = bottleneck_bw
+                fair_bw[self.v_nodes.index(node)] = min_bottleneck_bw
                 v_nodes.remove(node)
                 v_saturated_flows.add(node)
             if min_u_node in u_nodes:
@@ -97,5 +97,3 @@ class BipartiteGraph():
                 u_completed_links.add(min_u_node)
         
         return fair_bw
-            
-

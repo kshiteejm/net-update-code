@@ -47,7 +47,7 @@ class BipartiteGCN(nn.Module):
                     v_feats, n_hids, u_feats, act, layer_norm_on, final_layer_act)
                 _msg = msg.OneWayMessagePassing(f)
                 self.f_msg.append(_msg)
-        f = layers.Transformation(v_feats, n_hids, 1, act, layer_norm_on, final_layer_act)
+        f = layers.Transformation(v_feats, [n_hids[0]], 1, act, layer_norm_on, final_layer_act)
         self.f_msg.append(f)
         
     def forward(self, u_node_feats, v_node_feats, uv_adj_mat, vu_adj_mat):
