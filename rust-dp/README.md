@@ -15,5 +15,5 @@ data/result.csv
 
 The format of the result file is
 ```
-Value, Remaining number of steps, Node index to update (flexible length)
+value, remaining number of steps, node index to update (flexible length)
 ```
