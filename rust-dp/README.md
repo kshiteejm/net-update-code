@@ -12,3 +12,8 @@ The result by default is written in
 ```
 data/result.csv
 ```
+
+The format of the result file is
+```
+Value, Remaining number of steps, Node index to update (flexible length)
+```
