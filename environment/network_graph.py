@@ -17,6 +17,7 @@ class NetworkGraph:
     '''
     
     def __init__(self, topo_type='FatTree', kwargs={"pods": 4}):
+        self.topo_type = topo_type
         self.graph = self.create_graph(topo_type, kwargs)
 
     def create_graph(self, topo_type, kwargs):

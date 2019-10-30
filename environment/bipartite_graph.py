@@ -97,3 +97,75 @@ class BipartiteGraph():
                 u_completed_links.add(min_u_node)
         
         return fair_bw
+
+    def max_min_flow(self, bi_graph):
+        u_nodes_original = {n for n, d in bi_graph.nodes(data=True) if d['bipartite']==0}
+        v_nodes_original = set(self.bi_graph) - u_nodes_original
+        u_nodes_original = list(u_nodes_original)
+        v_nodes_original = list(v_nodes_original)
+
+        for node in v_nodes_original:
+            bi_graph.nodes[node]['node_feats'] = [0, 0]
+        for node in u_nodes_original:
+            bi_graph.nodes[node]['node_feats']  = [
+                random.randint(101, 1001), self.bi_graph.degree(node), 1, 0, 0]
+        
+        u_nodes = list(u_nodes_original)
+        v_nodes = list(v_nodes_original)
+        fair_bw = np.zeros(len(v_nodes))
+        v_saturated_flows = set()
+        u_completed_links = set()
+        u_capacities = dict()
+        u_flows = dict()
+
+        u_vacuous_links = []
+        for node in u_nodes:
+            capacity = bi_graph.nodes[node]['node_feats'][0]
+            num_flows = bi_graph.nodes[node]['node_feats'][1]
+            if num_flows == 0:
+                u_vacuous_links.append(node)
+                continue
+            u_capacities[node] = capacity
+            u_flows[node] = num_flows
+        for node in u_vacuous_links:
+            u_nodes.remove(node)
+            u_completed_links.add(node)
+
+        while len(u_nodes) != 0 and len(v_nodes) != 0:
+            min_u_node = None
+            min_bottleneck_bw = sys.maxsize
+            for node in u_nodes:
+                bottleneck_bw = u_capacities[node]/u_flows[node]
+                if bottleneck_bw < min_bottleneck_bw:
+                    min_u_node = node
+                    min_bottleneck_bw = bottleneck_bw
+            
+            min_u_node_ngbrs = set([n for n in bi_graph.neighbors(min_u_node)]) - v_saturated_flows
+            for node in min_u_node_ngbrs:
+                ngbrs = set([n for n in bi_graph.neighbors(node)]) - u_completed_links
+                for node_u in ngbrs:
+                    u_capacities[node_u] = u_capacities[node_u] - min_bottleneck_bw
+                    u_flows[node_u] = u_flows[node_u] - 1
+                    if u_flows[node_u] == 0:
+                        u_nodes.remove(node_u)
+                        u_completed_links.add(node_u)
+                fair_bw[v_nodes_original.index(node)] = min_bottleneck_bw
+                v_nodes.remove(node)
+                v_saturated_flows.add(node)
+            if min_u_node in u_nodes:
+                u_nodes.remove(min_u_node)
+                u_completed_links.add(min_u_node)
+        
+        return fair_bw
+        
+        def estimate_linear_cost(self, update_switch_set):
+            max_flows = self.true_output()
+            self.bi_graph_updated = self.bi_graph.copy()
+            for v_i in update_switch_set:
+                self.bi_graph_updated.remove_node(v_i)
+            updated_flows = self.max_min_flow()
+            # for i in range(updated_flows):
+
+            
+            
+
