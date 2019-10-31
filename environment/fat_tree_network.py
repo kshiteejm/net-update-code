@@ -3,7 +3,7 @@ from networkx import bipartite
 import random
 from itertools import combinations, chain
 import numpy as np
-import sys
+import sys, traceback
 
 class FatTreeNetwork:
     def __init__(self, pods=4, link_bw=10000):
@@ -147,13 +147,14 @@ class FatTreeNetwork:
         fair_bw = dict() 
         if bi_graph.size() == 0:
             return fair_bw
-        
-        link_nodes, flow_nodes = bipartite.sets(bi_graph)
 
         while bi_graph.number_of_edges() > 0: 
             min_link_node = None
             min_bottleneck_bw = sys.maxsize
-            link_nodes, flow_nodes = bipartite.sets(bi_graph)
+
+            link_nodes = [node for node in bi_graph.nodes if bi_graph.nodes[node]['bipartite'] == 0]
+            flow_nodes = [node for node in bi_graph.nodes if bi_graph.nodes[node]['bipartite'] == 1]
+                
             for link_node in link_nodes:
                 # print(bi_graph[link_node])
                 capacity = bi_graph.nodes[link_node]['capacity']
@@ -163,22 +164,31 @@ class FatTreeNetwork:
                     min_link_node = link_node
                     min_bottleneck_bw = bottleneck_bw
             min_link_flows = list(bi_graph.neighbors(min_link_node))
+            bi_graph.remove_node(min_link_node)
             for flow_node in min_link_flows:
                 fair_bw[flow_node] = min_bottleneck_bw
+                flow_links = list(bi_graph.neighbors(flow_node))
                 bi_graph.remove_node(flow_node)
-            bi_graph.remove_node(min_link_node)
+                for link_node in flow_links:
+                    if bi_graph.degree[link_node] == 0:
+                        bi_graph.remove_node(link_node)
+                        continue
+                    bi_graph.nodes[link_node]['capacity'] = bi_graph.nodes[link_node]['capacity'] - min_bottleneck_bw
+
         
         return fair_bw
 
     def generate_costs(self):
         baseline_bi_graph = self.generate_bi_graph(set())
         baseline_bw = self.get_max_min_bw(baseline_bi_graph)
-
+        print(baseline_bw)
+        
         for switch_set in self.powerset(self.update_switch_set):
             bi_graph = self.generate_bi_graph(switch_set)
             cost = self.get_cost(bi_graph, baseline_bw)
             print(cost, switch_set)
 
 if __name__ == '__main__':
+    random.seed(10)
     fat_tree_network = FatTreeNetwork()
     fat_tree_network.generate_costs()
