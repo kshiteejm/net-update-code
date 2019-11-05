@@ -37,7 +37,7 @@ pub fn dp(num_nodes: u32,
     
     // Check feasibility
     assert!(num_nodes >= num_steps);
-    assert!(num_steps >= update_idx.len() as u32);
+    assert!(num_steps <= update_idx.len() as u32);
     assert!(num_steps >= 1);
 
     // Check cost_model contains all data
