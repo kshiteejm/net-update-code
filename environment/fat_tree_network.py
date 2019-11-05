@@ -10,10 +10,12 @@ from graphviz import Graph
 from IPython.display import display
 
 class FatTreeNetwork:
-    def __init__(self, pods=4, link_bw=10000, generate_cost_file=True):
+    def __init__(self, pods=4, link_bw=10000, 
+                generate_cost_file=True, generate_visualizations=False):
         self.pods = pods
         self.link_bw = link_bw
         self.generate_cost_file = generate_cost_file
+        self.generate_visualizations = generate_visualizations
 
         graph = nx.DiGraph()
 
@@ -176,7 +178,7 @@ class FatTreeNetwork:
 
     def generate_costs(self):
         if self.generate_cost_file:
-            cost_file_name = "cost_fat_tree_%s_pods.csv" % (self.pods) 
+            cost_file_name = "../data/cost_fat_tree_%s_pods.csv" % (self.pods) 
             cost_file = open(cost_file_name, 'w')
         
         baseline_bi_graph, baseline_flows = self.generate_bi_graph(set())
@@ -194,23 +196,22 @@ class FatTreeNetwork:
             cost = self.get_cost(max_min_bw_matrix, baseline_bw_matrix)
             
             switch_set_string = ""
-            for switch in switch_set:
-                switch_set_string = str(switch) + "," + switch_set_string
+            for switch in sorted(switch_set):
+                switch_set_string =  switch_set_string + str(switch) + ","
             switch_set_string = switch_set_string[:-1]
             
-            saved_file_name = "graph_%s_%s.yaml" % (switch_set_string, round(cost, 2))
+            saved_file_name = "graph_%s_%s" % (switch_set_string, round(cost, 2))
 
             if self.generate_cost_file:
-                cost_file.write("%s, %s\n" % (round(cost, 2), switch_set_string))
-            print("%s, %s, %s" % (round(cost, 2), switch_set_string, saved_file_name))
+                cost_file.write("%s,%s\n" % (round(cost, 2), switch_set_string))
+            # print("%s, %s, %s" % (round(cost, 2), switch_set_string, saved_file_name))
             
-            # graph = self.get_updated_graph(flows, max_min_bw, switch_set)
-            # nx.write_yaml(graph, saved_file_name)
-            
-            if (switch_set_string == "16,5,1"):
+            if (self.generate_visualizations):
+            # if (switch_set_string == "16,5,1"):
                 graph = self.get_updated_graph(flows, max_min_bw, switch_set)
-                self.visualize_graph(graph, cost)
-                
+                self.visualize_graph(graph, round(cost, 2), saved_file_name)
+                # nx.write_yaml(graph, saved_file_name + ".yaml")
+
         if self.generate_cost_file:
             cost_file.close()
 
@@ -243,7 +244,7 @@ class FatTreeNetwork:
 
         return graph
     
-    def visualize_graph(self, graph, cost):
+    def visualize_graph(self, graph, cost, saved_file_name):
         core_physical_ids = [self._get_core_physical_id(logical_id) 
                             for logical_id in range(0, self.num_core_switches)]
         agg_physical_ids = [self._get_agg_physical_id(logical_id) 
@@ -306,9 +307,10 @@ class FatTreeNetwork:
                 pos='0.5, {}!'.format(max(v_dict.keys()) + 0.5),
                 color='white')
 
-        vg.render('./data/visualization', view=True)
+        vg.render('../data/%s' % saved_file_name, view=False)
 
 if __name__ == '__main__':
     random.seed(42)
-    fat_tree_network = FatTreeNetwork(pods=4, generate_cost_file=False)
+    fat_tree_network = FatTreeNetwork(
+        pods=4, generate_cost_file=True, generate_visualizations=False)
     fat_tree_network.generate_costs()
