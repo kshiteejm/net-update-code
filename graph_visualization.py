@@ -66,4 +66,9 @@ for e in g.edges:
     vg.edge(str(src), str(dst), penwidth=str(
         g.edges[e]['used_capacity'] / pen_scale))
 
+# put a text for cost in an invisible node
+vg.node('Cost: {}'.format(cost),
+        pos='0.5, {}!'.format(max(v_dict.keys()) + 0.5),
+        color='white')
+
 vg.render('./data/visualization', view=True)
