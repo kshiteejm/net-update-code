@@ -109,3 +109,6 @@ runs/*
 runs_*/*
 *.code-workspace
 *.png
+
+# rust compilation lock
+Cargo.lock
