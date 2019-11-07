@@ -1,6 +1,7 @@
 mod conf;
 mod csvf;
 mod dp;
+mod trace;
 
 extern crate itertools;
 
@@ -29,10 +30,15 @@ fn main() {
                             &config.update_idx,
                             &cost_model);
 
+    // Get optimal action sequence
+    let act_seq = trace::trace(config.num_steps,
+                               &config.update_idx,
+                               &actions);
+
     // Write values into a csv file in format:
     // value, step, index to update (flexible len)
     match csvf::write_value_csv(config.value_path,
-                         &values) {
+                                &values) {
         Ok(()) => println!("Values written in file."),
         Err(err) => panic!("csv write file error: {}", err),
     };
@@ -40,8 +46,14 @@ fn main() {
     // next index to update, *, step, index to update (flexible len)
     // '*' is for knowing the breaking point
     match csvf::write_action_csv(config.action_path,
-                         &actions) {
+                                 &actions) {
         Ok(()) => println!("Actions written in file."),
+        Err(err) => panic!("csv write file error: {}", err),
+    };
+    // Write action sequence into a csv file
+    match csvf::write_action_seq_csv(config.action_seq_path,
+                                     &act_seq) {
+        Ok(()) => println!("Action sequence written in file."),
         Err(err) => panic!("csv write file error: {}", err),
     };
 }

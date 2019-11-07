@@ -31,6 +31,12 @@ struct ActionRecord {
 }
 
 
+#[derive(Serialize)]
+struct ActionSeqRecord {
+    action: Vec<u32>,
+}
+
+
 pub fn read_csv_file(file_name: String)-> Result<
                      HashMap<Vec<u32>, f32>,
                      Box<dyn Error>> {
@@ -53,8 +59,8 @@ pub fn read_csv_file(file_name: String)-> Result<
 
 
 pub fn write_value_csv(file_name: String,
-                      values: &HashMap<(u32, Vec<u32>), f32>)
-                      -> Result<(), Box<dyn Error>> {
+                       values: &HashMap<(u32, Vec<u32>), f32>)
+                       -> Result<(), Box<dyn Error>> {
     let mut wtr = csv::WriterBuilder::new()
         .delimiter(b',')
         .flexible(true)
@@ -73,8 +79,8 @@ pub fn write_value_csv(file_name: String,
 
 
 pub fn write_action_csv(file_name: String,
-                      actions: &HashMap<(u32, Vec<u32>), Vec<u32> >)
-                      -> Result<(), Box<dyn Error>> {
+                        actions: &HashMap<(u32, Vec<u32>), Vec<u32> >)
+                        -> Result<(), Box<dyn Error>> {
     let mut wtr = csv::WriterBuilder::new()
         .delimiter(b',')
         .flexible(true)
@@ -92,3 +98,20 @@ pub fn write_action_csv(file_name: String,
     Ok(())
 }
 
+
+pub fn write_action_seq_csv(file_name: String,
+                            actions: &Vec<Vec<u32> >)
+                            -> Result<(), Box<dyn Error>> {
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(b',')
+        .flexible(true)
+        .has_headers(false)
+        .from_path(file_name)?;
+
+    for i in 0..actions.len() {
+        wtr.serialize(ActionSeqRecord {
+            action: actions[i].to_vec(),
+        })?;
+    }
+    Ok(())
+}

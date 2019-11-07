@@ -25,5 +25,9 @@ pub struct Config {
 
     ///Path to ouput action result csv file
     #[structopt(long, default_value = "./data/actions.csv")]
-    pub action_path: String
+    pub action_path: String,
+
+    ///Path to ouput action result csv file
+    #[structopt(long, default_value = "./data/action_seq.csv")]
+    pub action_seq_path: String
 }
