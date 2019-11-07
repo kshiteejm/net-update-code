@@ -33,7 +33,8 @@ pub fn dp(num_nodes: u32,
           num_steps: u32,
           update_idx: &Vec<u32>,
           cost_model: &HashMap<Vec<u32>, f32>)
-       -> HashMap<(u32, Vec<u32>), f32> {
+       -> (HashMap<(u32, Vec<u32>), f32>,
+           HashMap<(u32, Vec<u32>), Vec<u32> >) {
     
     // Check feasibility
     assert!(num_nodes >= num_steps);
@@ -47,11 +48,14 @@ pub fn dp(num_nodes: u32,
     // Initialize data store
     println!("Initialize value hash map");
     let mut values: HashMap<(u32, Vec<u32>), f32> = 
-        HashMap::new();
+        HashMap::new();  // optimal value
+    let mut actions: HashMap<(u32, Vec<u32>), Vec<u32> > =
+        HashMap::new();  // optimal action
     let uidx_power = power_set(&update_idx);
     for i in 1..=num_steps {
         for j in &uidx_power {
             values.insert((i, j.to_vec()), std::f32::MAX);
+            actions.insert((i, j.to_vec()), [].to_vec());
         }
     }
 
@@ -60,6 +64,7 @@ pub fn dp(num_nodes: u32,
     println!("Compute boundary condition (step 1)");
     for j in &uidx_power {
         *values.get_mut(&(1, j.to_vec())).unwrap() = cost_model[j];
+        *actions.get_mut(&(1, j.to_vec())).unwrap() = j.to_vec();
     }
 
     // DP iteration
@@ -67,20 +72,23 @@ pub fn dp(num_nodes: u32,
         let now = Instant::now();
         for j in &uidx_power {
             let mut min_v = std::f32::MAX;
+            let mut opt_a = [].to_vec();
             for k in &power_set(&j) {
                 let uidx_remain = exclude_vec(j.to_vec(), k);
                 let curr_v = values.get(&(i - 1, uidx_remain))
                              .unwrap() + cost_model[k];
                 if curr_v < min_v {
                     min_v = curr_v;
+                    opt_a = k.to_vec()
                 }
             }
             *values.get_mut(&(i, j.to_vec())).unwrap() = min_v;
+            *actions.get_mut(&(i, j.to_vec())).unwrap() = opt_a;
         }
         println!("DP iteration, step {}, elapsed {} millisecs",
                  i, now.elapsed().as_millis());
     }
 
     // Return results
-    values
+    (values, actions)
 }

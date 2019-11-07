@@ -19,7 +19,11 @@ pub struct Config {
     #[structopt(long, default_value = "./data/cm.csv")]
     pub cm_path: String,
 
-    /// Path to ouput result csv file
-    #[structopt(long, default_value = "./data/result.csv")]
-    pub result_path: String
+    /// Path to ouput value result csv file
+    #[structopt(long, default_value = "./data/values.csv")]
+    pub value_path: String,
+
+    ///Path to ouput action result csv file
+    #[structopt(long, default_value = "./data/actions.csv")]
+    pub action_path: String
 }

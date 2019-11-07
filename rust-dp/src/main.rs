@@ -24,16 +24,24 @@ fn main() {
     cost_model.insert([].to_vec(), 0.0);
 
     // Run DP
-    let results = dp::dp(config.num_nodes,
-                         config.num_steps,
-                         &config.update_idx,
-                         &cost_model);
+    let (values, actions) = dp::dp(config.num_nodes,
+                            config.num_steps,
+                            &config.update_idx,
+                            &cost_model);
 
-    // Write results into a csv file in format:
+    // Write values into a csv file in format:
     // value, step, index to update (flexible len)
-    match csvf::write_csv_file(config.result_path,
-                         &results) {
-        Ok(()) => println!("Results written in file."),
+    match csvf::write_value_csv(config.value_path,
+                         &values) {
+        Ok(()) => println!("Values written in file."),
+        Err(err) => panic!("csv write file error: {}", err),
+    };
+    // Write values into a csv file in format:
+    // next index to update, *, step, index to update (flexible len)
+    // '*' is for knowing the breaking point
+    match csvf::write_action_csv(config.action_path,
+                         &actions) {
+        Ok(()) => println!("Actions written in file."),
         Err(err) => panic!("csv write file error: {}", err),
     };
 }
