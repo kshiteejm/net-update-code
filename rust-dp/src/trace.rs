@@ -13,7 +13,7 @@ pub fn trace(num_steps: u32,
         let act = &actions[&(num_steps - i, left_idx.to_vec())];
         act_seq.push(act.to_vec());
         for a in 0..act.len() {
-            // This is O(n^2) but meh
+            // This can be O(n^2) but meh (only run once)
             let idx = left_idx.iter().position(
                 |x| *x == act[a]).unwrap();
             left_idx.remove(idx);
