@@ -448,7 +448,7 @@ class FatTreeNetwork:
         # initialize l
         for edge in graph.edges:
             q_graph.add_node(node_id, type='l', id=edge, 
-                             raw_feat=[graph.edges[edge]['capacity'], 
+                             raw_feats=[graph.edges[edge]['capacity'], 
                                        graph.edges[edge]['used_capacity']])
             q_graph.add_edge(node_id, edge[0])
             q_graph.add_edge(node_id, edge[1])
@@ -465,7 +465,7 @@ class FatTreeNetwork:
                         path_num = 0
                         for path in nx.all_shortest_paths(graph, physical_src, physical_dst):
                             q_graph.add_node(node_id, type='p', id=(src,dst,path_num), 
-                                             raw_feat=[0.0,0.0])
+                                             raw_feats=[0.0,0.0])
                             for j in range(1, len(path)):
                                 i = j - 1
                                 path_src = path[i]
@@ -480,11 +480,48 @@ class FatTreeNetwork:
             for dst in range(self.num_tor_switches):
                 if src != dst:
                     q_graph.add_node(node_id, type='tc', id=(src,dst), 
-                                         raw_feat=[self.traffic_matrix[src][dst],0.0])
+                                         raw_feats=[self.traffic_matrix[src][dst],0.0])
                     for p_node_id in tc_node_dict[(src, dst)]:
                         q_graph.add_edge(node_id, p_node_id)
                     tc.append(node_id)
                     node_id = node_id + 1
+        # number of total nodes * 2 
+        s_node_features = np.zeros((len(q_graph.nodes), 2))
+        l_node_features = np.zeros((len(q_graph.nodes), 2))
+        p_node_features = np.zeros((len(q_graph.nodes), 2))
+        tc_node_features = np.zeros((len(q_graph.nodes), 2))
+        for node_id in s:
+            s_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+            s_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+        for node_id in l:
+            l_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+            l_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+        for node_id in p:
+            p_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+            p_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+        for node_id in tc:
+            tc_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+            tc_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+
+        s_adj_matrix = nx.adjacency_matrix(q_graph).todense()
+        l_adj_matrix = nx.adjacency_matrix(q_graph).todense()
+        p_adj_matrix = nx.adjacency_matrix(q_graph).todense()
+        tc_adj_matrix = nx.adjacency_matrix(q_graph).todense()        
+        all_nodes = set(q_graph.nodes)
+        for i in all_nodes.difference(set(s)):
+            s_adj_matrix[i] = 0
+        for i in all_nodes.difference(set(l)):
+            l_adj_matrix[i] = 0
+        for i in all_nodes.difference(set(p)):
+            p_adj_matrix[i] = 0
+        for i in all_nodes.difference(set(tc)):
+            tc_adj_matrix[i] = 0
+
+        np.save("nodes_datum", 
+            [s_node_features, l_node_features, p_node_features, tc_node_features])
+        np.save("adj_mat_datum", 
+            [s_adj_matrix, l_adj_matrix, p_adj_matrix, tc_adj_matrix])    
+
         return q_graph
 
 if __name__ == '__main__':
@@ -505,6 +542,7 @@ if __name__ == '__main__':
     else:
         dataset = "../rust-dp/data"
     pods = 4
+    total_cost = 0.0
 
     random.seed(seed)
     fat_tree_network = FatTreeNetwork(pods=pods)
@@ -533,3 +571,4 @@ if __name__ == '__main__':
 
     f = open("%s/cost_gcn_dataset" % dataset, 'w+')
     f.write("%s,%s\n" % (total_cost, gcn_yaml_file))
+    f.close()
