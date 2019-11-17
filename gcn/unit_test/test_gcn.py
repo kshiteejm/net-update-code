@@ -26,4 +26,13 @@ class TestGraphConvolution(unittest.TestCase):
         node_out = mgcn([node_in_1, node_in_2],
                        [adj_mats_1, adj_mats_2])
 
+    def test_feedforward_more_steps(self):
+        mgcn = MGCN([2, 3], 1, [16, 32], 8, 6)
+        node_in_1 = torch.FloatTensor([[1,2], [0,0]])
+        node_in_2 = torch.FloatTensor([[0,0,0], [1,2,3]])
+        adj_mats_1 = torch.FloatTensor([[0, 1], [0, 0]])
+        adj_mats_2 = torch.FloatTensor([[0, 0], [1, 0]])
+        node_out = mgcn([node_in_1, node_in_2],
+                       [adj_mats_1, adj_mats_2])
+
 
