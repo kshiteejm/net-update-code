@@ -60,8 +60,8 @@ for e in g.edges:
         edge_record.add((src, dst))
     else:
         # check 'used_capacity' is the same
-        np.isclose(g.edges[e]['used_capacity'],
-                   g.edges[(dst, src)]['used_capacity'])
+        assert(np.isclose(g.edges[e]['used_capacity'],
+                   g.edges[(dst, src)]['used_capacity']))
         continue
     vg.edge(str(src), str(dst), penwidth=str(
         g.edges[e]['used_capacity'] / pen_scale))

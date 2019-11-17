@@ -1,33 +1,36 @@
 import networkx as nx
 from networkx import bipartite
 import random
+import os
 
 from itertools import combinations, chain
 import numpy as np
 import sys, traceback
 
-from graphviz import Graph
+from graphviz import Graph, Digraph
 from IPython.display import display
 
 class FatTreeNetwork:
-    def __init__(self, pods=4, link_bw=10000, 
-                generate_cost_file=True, generate_visualizations=False):
+    def __init__(self, pods=4, link_bw=10000.0):
         self.pods = pods
         self.link_bw = link_bw
-        self.generate_cost_file = generate_cost_file
-        self.generate_visualizations = generate_visualizations
 
         graph = nx.DiGraph()
 
-        num_tor_switches = (pods*pods)//2
-        num_agg_switches = (pods*pods)//2
-        num_core_switches = (pods//2) ** 2
+        # init switch cardinalities
+        # (1 pod) contains (pods//2 agg switches, pods//2 tor switch)
+        # (1 agg switch) connected to (pods//2 core switches)  
+        num_tor_switches = (pods//2) * pods
+        num_agg_switches = (pods//2) * pods
+        num_core_switches = (pods//2) * (pods//2)
         num_switches = num_tor_switches + \
                        num_agg_switches + \
                        num_core_switches
         
-        graph.add_nodes_from(range(num_switches), active=True)
+        # init graph nodes
+        graph.add_nodes_from(range(num_switches), active=True, step=-1)
 
+        # init graph edges
         link_id = 0
         for pod in range(pods):
             core_switch = 0
@@ -60,88 +63,132 @@ class FatTreeNetwork:
         self.num_core_switches = num_core_switches
         self.num_switches = num_switches
 
+        # init traffic matrix between tor pairs
         self.traffic_matrix = np.zeros((num_tor_switches, num_tor_switches))
         for src in range(num_tor_switches):
             for dst in range(num_tor_switches):
                 if src == dst:
                     continue
-                self.traffic_matrix[src][dst] = random.randint(2500, 7500)
+                self.traffic_matrix[src][dst] = float(random.randint(1000, 1000))
+        
+        print(np.sum(self.traffic_matrix))
 
+        # init set of switches to be updated in the network
         self.update_switch_set = set()
         for core_logical_id in range(self.num_core_switches):
-            self.update_switch_set.add(self._get_core_physical_id(core_logical_id))
+            self.update_switch_set.add(self.get_core_physical_id(core_logical_id))
         for agg_logical_id in range(self.num_agg_switches):
-            self.update_switch_set.add(self._get_agg_physical_id(agg_logical_id))
-        
-        print(self.traffic_matrix)
+            self.update_switch_set.add(self.get_agg_physical_id(agg_logical_id))
 
-    def _get_tor_physical_id(self, tor_logical_id):
+        self.baseline_bw_matrix, self.baseline_graph = self.generate_baseline_bws()
+
+    # helper functions to get a physical id from a logical id
+    # physical id = node index in the networkx graph datastructure
+    # logical id = [0 ... num_switches_of_that_type)
+    def get_tor_physical_id(self, tor_logical_id):
         pod = tor_logical_id // (self.pods//2)
         tor_offset = (tor_logical_id % (self.pods//2)) + self.pods//2
         tor_physical_id = self.num_core_switches + pod*self.pods + tor_offset
         return tor_physical_id
 
-    def _get_agg_physical_id(self, agg_logical_id):
+    def get_agg_physical_id(self, agg_logical_id):
         pod = agg_logical_id // (self.pods//2)
         agg_offset = (agg_logical_id % (self.pods//2))
         agg_physical_id = self.num_core_switches + pod*self.pods + agg_offset
         return agg_physical_id
 
-    def _get_core_physical_id(self, core_logical_id):
+    def get_core_physical_id(self, core_logical_id):
         return core_logical_id
 
+    def get_tor_physical_ids(self):
+        tor_physical_ids = [self.get_tor_physical_id(logical_id) 
+                            for logical_id in range(0, self.num_tor_switches)]
+        return tor_physical_ids
+
+    def get_agg_physical_ids(self):
+        agg_physical_ids = [self.get_agg_physical_id(logical_id) 
+                            for logical_id in range(0, self.num_agg_switches)]
+        return agg_physical_ids
+
+    def get_core_physical_ids(self):
+        core_physical_ids = [self.get_core_physical_id(logical_id) 
+                            for logical_id in range(0, self.num_core_switches)]
+        return core_physical_ids
+
+    # generate a powerset except the empty set
     def powerset(self, switch_set):
         s = list(switch_set)
         return chain.from_iterable(combinations(s, r) for r in range(1, len(s)+1))
 
+    # generate a bi-partite graph for waterfilling algorithm computation
+    # switch_set: set of switches that are being updated and are not active
     def generate_bi_graph(self, switch_set):
         remaining_switch_set = set(self.graph.nodes).difference(set(switch_set))
         subgraph = self.graph.subgraph(remaining_switch_set)
-        flows = []
+        paths = []
+
+        # get all active paths 
+        # assumptions: 
+        # 1. traffic at the granularity of (src, dst) tor pairs 
+        # 2. traffic is routed on all active shortest paths from a src to a dst tor
+        # 3. traffic can be arbitrarily divided
         for src in range(self.num_tor_switches):
             for dst in range(self.num_tor_switches):
                 if self.traffic_matrix[src][dst] > 0:
-                    physical_src = self._get_tor_physical_id(src)
-                    physical_dst = self._get_tor_physical_id(dst)
+                    physical_src = self.get_tor_physical_id(src)
+                    physical_dst = self.get_tor_physical_id(dst)
                     if nx.has_path(subgraph, physical_src, physical_dst):
-                        # shortest_path_len = sys.maxsize
                         for path in nx.all_shortest_paths(subgraph, physical_src, physical_dst):
-                            flows.append([src, dst, path])
-                            # print(src, dst, path)
+                            paths.append([src, dst, path])
 
+        # make a bi-partite graph (U, V, E)
+        # U: set of path nodes
+        # V: set of link nodes
         bi_graph = nx.Graph()
-        for flow in flows: 
-            src = flow[0]
-            dst = flow[1]
-            path = flow[2]
+        path_counter = 0
+        for path in paths: 
+            src = path[0]
+            dst = path[1]
+            pth = path[2]
 
-            flow_node = (src, dst, 'flow')
-            bi_graph.add_node(flow_node, bipartite=1)
+            path_node = (src, dst, "path_%s" % path_counter)
+            bi_graph.add_node(path_node, bipartite=0)
             
+            # add a fictitious edge for (src, dst) tor pair at the src 
+            # the capacity of this edge is the traffic demand between the (src, dst) pair
             link_node = (src, dst, src)
-            bi_graph.add_node(link_node, bipartite=0, capacity=self.traffic_matrix[src][dst])
-            bi_graph.add_edge(link_node, flow_node)
+            bi_graph.add_node(link_node, bipartite=1, 
+                                         capacity=self.traffic_matrix[src][dst],
+                                         max_capacity=self.traffic_matrix[src][dst])
+            bi_graph.add_edge(link_node, path_node)
 
+            # add a fictitious edge for (src, dst) tor pair at the dst 
+            # the capacity of this edge is the traffic demand between the (src, dst) pair
             link_node = (src, dst, dst)
-            bi_graph.add_node(link_node, bipartite=0, capacity=self.traffic_matrix[src][dst])
-            bi_graph.add_edge(link_node, flow_node)
+            bi_graph.add_node(link_node, bipartite=1, 
+                                         capacity=self.traffic_matrix[src][dst],
+                                         max_capacity=self.traffic_matrix[src][dst])
+            bi_graph.add_edge(link_node, path_node)
 
-            for j in range(1, len(path)):
+            # add edge between a path node and all link nodes that path traverses
+            for j in range(1, len(pth)):
                 i = j - 1
-                link_node = (path[i], path[j], 'link')
-                bi_graph.add_node(link_node, bipartite=0, capacity=subgraph[path[i]][path[j]]['capacity'])
-                bi_graph.add_edge(link_node, flow_node)
-        
-        # print(bi_graph.nodes)
-        # print(bi_graph.edges)
+                link_node = (pth[i], pth[j], 'link')
+                bi_graph.add_node(link_node, bipartite=1, 
+                                             capacity=subgraph[pth[i]][pth[j]]['capacity'],
+                                             max_capacity=subgraph[pth[i]][pth[j]]['capacity'])
+                bi_graph.add_edge(link_node, path_node)
 
-        return bi_graph, flows
-        
-    def get_cost(self, max_min_bw_matrix, baseline_bw_matrix):
-        cost = np.sum(abs(baseline_bw_matrix - max_min_bw_matrix))
-        return cost
+            path_counter = path_counter + 1
 
-    def get_max_min_bw(self, bi_graph):
+        return bi_graph, paths
+
+    # generate the max min bw allocations for traffic between tor pairs
+    # bi_graph: a bipartite graph with path nodes and link nodes
+    def get_max_min_bw(self, bi_graph, debug=False):
+        if debug:
+            print("\n===PRINTING MAX-MIN BW===")
+
         fair_bw = dict() 
         if bi_graph.size() == 0:
             return fair_bw
@@ -150,112 +197,132 @@ class FatTreeNetwork:
             min_link_node = None
             min_bottleneck_bw = sys.maxsize
 
-            link_nodes = [node for node in bi_graph.nodes if bi_graph.nodes[node]['bipartite'] == 0]
-            flow_nodes = [node for node in bi_graph.nodes if bi_graph.nodes[node]['bipartite'] == 1]
+            link_nodes = [node for node in bi_graph.nodes 
+                               if bi_graph.nodes[node]['bipartite'] == 1]
+            path_nodes = [node for node in bi_graph.nodes 
+                               if bi_graph.nodes[node]['bipartite'] == 0]
                 
             for link_node in link_nodes:
                 # print(bi_graph[link_node])
                 capacity = bi_graph.nodes[link_node]['capacity']
-                flows = bi_graph.degree[link_node]
-                bottleneck_bw = capacity/flows
+                paths = bi_graph.degree[link_node]
+                bottleneck_bw = capacity/paths
                 if bottleneck_bw < min_bottleneck_bw:
                     min_link_node = link_node
                     min_bottleneck_bw = bottleneck_bw
-            min_link_flows = list(bi_graph.neighbors(min_link_node))
+            # if debug:
+            #     print("link: %s: %s" 
+            #           % (min_link_node, bi_graph.nodes[min_link_node]['max_capacity']))
+            min_link_paths = list(bi_graph.neighbors(min_link_node))
             bi_graph.remove_node(min_link_node)
-            for flow_node in min_link_flows:
-                fair_bw[flow_node] = min_bottleneck_bw
-                flow_links = list(bi_graph.neighbors(flow_node))
-                bi_graph.remove_node(flow_node)
-                for link_node in flow_links:
+            for path_node in min_link_paths:
+                fair_bw[path_node] = min_bottleneck_bw
+                path_links = list(bi_graph.neighbors(path_node))
+                bi_graph.remove_node(path_node)
+                for link_node in path_links:
+                    bi_graph.nodes[link_node]['capacity'] = \
+                            bi_graph.nodes[link_node]['capacity'] - min_bottleneck_bw
                     if bi_graph.degree[link_node] == 0:
+                        # if debug:
+                        #     print("link: %s: %s" % (link_node, 
+                        #           bi_graph.nodes[link_node]['max_capacity'] - \
+                        #             bi_graph.nodes[link_node]['capacity']))
                         bi_graph.remove_node(link_node)
                         continue
-                    bi_graph.nodes[link_node]['capacity'] = bi_graph.nodes[link_node]['capacity'] - min_bottleneck_bw
-
         
         return fair_bw
 
-    def generate_costs(self):
-        if self.generate_cost_file:
-            cost_file_name = "../data/cost_fat_tree_%s_pods.csv" % (self.pods) 
-            cost_file = open(cost_file_name, 'w')
-        
-        baseline_bi_graph, baseline_flows = self.generate_bi_graph(set())
-        baseline_bw = self.get_max_min_bw(baseline_bi_graph)
-        baseline_bw_matrix = self.get_flow_bw_matrix(baseline_bw)
-        graph = self.get_updated_graph(baseline_flows, baseline_bw, set())
+    # get the cost of a max min bw allocation on a graph with a subset of switches taken down
+    # the cost function is a linear cost function at the moment
+    def get_cost(self, max_min_bw_matrix, baseline_bw_matrix):
+        cost = np.sum(abs(baseline_bw_matrix - max_min_bw_matrix))
+        return cost
+
+    # generate baselines with all switches active
+    def generate_baseline_bws(self):
+        # generate baseline max-min bw allocation with all switches active
+        baseline_bi_graph, baseline_paths = self.generate_bi_graph(set())
+        baseline_bws = self.get_max_min_bw(baseline_bi_graph)
+        baseline_bw_matrix = self.get_traffic_class_bw_matrix(baseline_bws)
+        baseline_graph = self.get_updated_graph(baseline_paths, baseline_bws, set(), [])
 
         print(baseline_bw_matrix)
         print(np.sum(baseline_bw_matrix))
+        
+        return baseline_bw_matrix, baseline_graph
+
+    # generate all possible one-step update costs
+    def generate_costs(self, cost_file_name): 
+        cost_file = open(cost_file_name, 'w')
+        cost_file.write("cost,down_idx\n")
 
         for switch_set in self.powerset(self.update_switch_set):
-            bi_graph, flows = self.generate_bi_graph(switch_set)
+            bi_graph, paths = self.generate_bi_graph(switch_set)
             max_min_bw = self.get_max_min_bw(bi_graph)
-            max_min_bw_matrix = self.get_flow_bw_matrix(max_min_bw)
-            cost = self.get_cost(max_min_bw_matrix, baseline_bw_matrix)
+            max_min_bw_matrix = self.get_traffic_class_bw_matrix(max_min_bw)
+            cost = self.get_cost(max_min_bw_matrix, self.baseline_bw_matrix)
+            # cost = self.get_cost(max_min_bw_matrix, self.traffic_matrix)
             
             switch_set_string = ""
             for switch in sorted(switch_set):
                 switch_set_string =  switch_set_string + str(switch) + ","
             switch_set_string = switch_set_string[:-1]
             
-            saved_file_name = "graph_%s_%s" % (switch_set_string, round(cost, 2))
+            cost_file.write("%s,%s\n" % (round(cost, 2), switch_set_string))    
+        cost_file.close()
 
-            if self.generate_cost_file:
-                cost_file.write("%s,%s\n" % (round(cost, 2), switch_set_string))
-            # print("%s, %s, %s" % (round(cost, 2), switch_set_string, saved_file_name))
-            
-            if (self.generate_visualizations):
-            # if (switch_set_string == "16,5,1"):
-                graph = self.get_updated_graph(flows, max_min_bw, switch_set)
-                self.visualize_graph(graph, round(cost, 2), saved_file_name)
-                # nx.write_yaml(graph, saved_file_name + ".yaml")
+    def get_traffic_class_bw_matrix(self, path_bws):
+        traffic_class_bw_matrix = np.zeros((self.num_tor_switches, self.num_tor_switches))
+        for path in path_bws:
+            src = path[0]
+            dst = path[1]
+            traffic_class_bw_matrix[src][dst] = traffic_class_bw_matrix[src][dst] + path_bws[path]
+        return traffic_class_bw_matrix
 
-        if self.generate_cost_file:
-            cost_file.close()
-
-    def get_flow_bw_matrix(self, flow_bw):
-        flow_bw_matrix = np.zeros((self.num_tor_switches, self.num_tor_switches))
-        for flow in flow_bw:
-            src = flow[0]
-            dst = flow[1]
-            flow_bw_matrix[src][dst] = flow_bw_matrix[src][dst] + flow_bw[flow]
-        return flow_bw_matrix
-
-    def get_updated_graph(self, flows, flow_bw, switch_set):
+    def get_updated_graph(self, paths, path_bws, switch_set, action_seq):
+        # print(path_bws)
         graph = self.graph.copy()
 
         for switch in switch_set:
             graph.nodes[switch]['active'] = False
+        
+        step = 0
+        for seq in action_seq:
+            for switch in seq:
+                graph.nodes[switch]['step'] = step
+            step = step + 1
 
-        for flow in flows:
-            src = flow[0]
-            dst = flow[1]
-            path = flow[2]
-            flow_node = (src, dst, 'flow')
-            bw = flow_bw[flow_node]
-            for j in range(1, len(path)):
+        path_counter = 0
+        for path in paths:
+            src = path[0]
+            dst = path[1]
+            pth = path[2]
+            path_node = (src, dst, 'path_%s' % path_counter)
+            bw = path_bws[path_node]
+
+            # print("BW: %s: %s" % (path_node, bw))
+            for j in range(1, len(pth)):
                 i = j - 1
-                path_src = path[i]
-                path_dst = path[j]
-                graph[path_src][path_dst]['used_capacity'] = \
-                    graph[path_src][path_dst]['used_capacity'] + bw
+                pth_src = pth[i]
+                pth_dst = pth[j]
+                graph[pth_src][pth_dst]['used_capacity'] = \
+                    graph[pth_src][pth_dst]['used_capacity'] + bw
+            
+            path_counter = path_counter + 1
+
+        # for edge in graph.edges():
+        #     print("%s: %s" % (edge, graph.edges[edge]['used_capacity']))
 
         return graph
     
-    def visualize_graph(self, graph, cost, saved_file_name):
-        core_physical_ids = [self._get_core_physical_id(logical_id) 
-                            for logical_id in range(0, self.num_core_switches)]
-        agg_physical_ids = [self._get_agg_physical_id(logical_id) 
-                            for logical_id in range(0, self.num_agg_switches)]
-        tor_physical_ids = [self._get_tor_physical_id(logical_id) 
-                            for logical_id in range(0, self.num_tor_switches)]
-        
+    def visualize_graph(self, graph, cost, visual_file):
+        core_physical_ids = self.get_core_physical_ids()
+        agg_physical_ids = self.get_agg_physical_ids()
+        tor_physical_ids = self.get_tor_physical_ids()
         physical_ids = [core_physical_ids, agg_physical_ids, tor_physical_ids]
 
         # TODO: specify better max cap
-        pen_scale = 5000
+        pen_scale = self.link_bw
 
         # TODO: automate vertical coordinate
         v_dict = {0: 2, 1: 1, 2: 0}
@@ -272,18 +339,22 @@ class FatTreeNetwork:
                 (j + offset , v_dict[i])  # looks better
         
         # graph visualization object (pos needs neato)
-        vg = Graph('switch_graph', engine='neato')
+        vg = Digraph('switch_graph', engine='neato')
 
         # place nodes in the graph
         for n in graph.nodes:
             if graph.nodes[n]['active']:
-                color = 'white'
+                if graph.nodes[n]['step'] == -1:  
+                    color = 'white'
+                else:
+                    num = (graph.nodes[n]['step'] + 1) * 17
+                    color = 'gray%s' % num
             else:
                 color = 'dimgray'
             vg.node(str(n), pos='{}, {}!'.format(
-                coord_dict[n][0], coord_dict[n][1]),
-                shape='circle', fillcolor=color,
-                style='filled')
+                    coord_dict[n][0], coord_dict[n][1]),
+                    shape='circle', fillcolor=color,
+                    style='filled')
 
         # TODO: (check) prevent replotting the same edge
         edge_record = set()
@@ -292,25 +363,166 @@ class FatTreeNetwork:
         for e in graph.edges:
             src = e[0]
             dst = e[1]
-            if (dst, src) not in edge_record:
-                edge_record.add((src, dst))
-            else:
-                # check 'used_capacity' is the same
-                np.isclose(graph.edges[e]['used_capacity'],
-                        graph.edges[(dst, src)]['used_capacity'])
-                continue
-            vg.edge(str(src), str(dst), penwidth=str(
-                graph.edges[e]['used_capacity'] / pen_scale))
+            color = 'black'
+            if coord_dict[src][1] % 2 == 0: 
+                color = 'grey'
+            weight = graph.edges[e]['used_capacity'] / pen_scale
+            # if (dst, src) not in edge_record:
+            #     edge_record.add((src, dst))
+            # else:
+            #     # check 'used_capacity' is the same
+            #     np.isclose(graph.edges[e]['used_capacity'],
+            #             graph.edges[(dst, src)]['used_capacity'])
+            #     continue
+            vg.edge(str(src), str(dst), 
+                penwidth=str(graph.edges[e]['used_capacity'] / pen_scale), 
+                len=str(graph.edges[e]['used_capacity'] / pen_scale),
+                color=color)
 
         # put a text for cost in an invisible node
         vg.node('Cost: {}'.format(cost),
                 pos='0.5, {}!'.format(max(v_dict.keys()) + 0.5),
                 color='white')
 
-        vg.render('../data/%s' % saved_file_name, view=False)
+        vg.render(visual_file, view=False)
+
+    def generate_visualization(self, optimal_action_seq_file, visual_file):
+        print(self.traffic_matrix)
+
+        f = open(optimal_action_seq_file, 'r')
+        action_seq = []
+        for line in f.readlines():
+            if (line == '""\n'):
+                continue
+            switch_set = line[:-1]
+            switch_set = switch_set.split(',')
+            print(switch_set)
+            switch_set = [int(switch) for switch in switch_set]
+            switch_set = set(switch_set)
+            action_seq.append(switch_set)
+        print(action_seq)
+        
+        total_cost = 0
+        for switch_set in action_seq:
+            bi_graph, paths = self.generate_bi_graph(switch_set)
+            max_min_bw = self.get_max_min_bw(bi_graph, True)
+            max_min_bw_matrix = self.get_traffic_class_bw_matrix(max_min_bw)
+            print(max_min_bw_matrix)
+            cost = self.get_cost(max_min_bw_matrix, self.baseline_bw_matrix)
+            # cost = self.get_cost(max_min_bw_matrix, self.traffic_matrix)
+            total_cost = total_cost + cost
+        
+        self.visualize_graph(self.baseline_graph, round(total_cost, 2), visual_file)
+
+    def generate_gcn_dataset(self):
+        # generate a quad-graph - with 4 types of nodes
+        # Traffic Class (TC) <-> Paths (P) <-> Links(L) <-> Switches (S)
+        # TC raw feat = {traffic demand}
+        # P raw feat = {}
+        # L raw feat = {capacity, used-capacity}
+        # S raw feat = {}   
+
+        # create nodes and register node-indices for each node type
+        graph = self.baseline_graph
+        q_graph = nx.Graph()
+        tc = []
+        p = []
+        l = []
+        s = []
+        link_node_dict = dict()
+        tc_node_dict = dict()
+        node_id = 0
+        # initialize tc_node_dict
+        for src in range(self.num_tor_switches):
+            for dst in range(self.num_tor_switches):
+                if src != dst:
+                    tc_node_dict[(src, dst)] = []
+         
+        # initialize s
+        for node in graph.nodes:
+            q_graph.add_node(node_id, type='s', id=node, raw_feats=[0.0,0.0])
+            s.append(node_id)
+            node_id = node_id + 1
+        # initialize l
+        for edge in graph.edges:
+            q_graph.add_node(node_id, type='l', id=edge, 
+                             raw_feat=[graph.edges[edge]['capacity'], 
+                                       graph.edges[edge]['used_capacity']])
+            q_graph.add_edge(node_id, edge[0])
+            q_graph.add_edge(node_id, edge[1])
+            l.append(node_id)
+            link_node_dict[edge] = node_id
+            node_id = node_id + 1
+        # initialize p
+        for src in range(self.num_tor_switches):
+            for dst in range(self.num_tor_switches):
+                if src != dst:
+                    physical_src = self.get_tor_physical_id(src)
+                    physical_dst = self.get_tor_physical_id(dst)
+                    if nx.has_path(graph, physical_src, physical_dst):
+                        path_num = 0
+                        for path in nx.all_shortest_paths(graph, physical_src, physical_dst):
+                            q_graph.add_node(node_id, type='p', id=(src,dst,path_num), 
+                                             raw_feat=[0.0,0.0])
+                            for j in range(1, len(path)):
+                                i = j - 1
+                                path_src = path[i]
+                                path_dst = path[j]
+                                q_graph.add_edge(node_id, link_node_dict[(path_src, path_dst)])
+                            p.append(node_id)
+                            tc_node_dict[(src, dst)].append(node_id)
+                            node_id = node_id + 1
+                            path_num = path_num + 1
+        # initialize tc
+        for src in range(self.num_tor_switches):
+            for dst in range(self.num_tor_switches):
+                if src != dst:
+                    q_graph.add_node(node_id, type='tc', id=(src,dst), 
+                                         raw_feat=[self.traffic_matrix[src][dst],0.0])
+                    for p_node_id in tc_node_dict[(src, dst)]:
+                        q_graph.add_edge(node_id, p_node_id)
+                    tc.append(node_id)
+                    node_id = node_id + 1
+        return q_graph
 
 if __name__ == '__main__':
-    random.seed(42)
-    fat_tree_network = FatTreeNetwork(
-        pods=4, generate_cost_file=True, generate_visualizations=False)
-    fat_tree_network.generate_costs()
+    if len(sys.argv) < 5:
+        print("python3 fat_tree_network \
+                       seed \
+                       gen_costs_bool \
+                       gen_action_seq \
+                       gen_visuals_bool \
+                       dataset_loc")
+    seed = sys.argv[1]
+    generate_cost_file = ("True" == sys.argv[2])
+    generate_action_seq = ("True" == sys.argv[3])
+    generate_visualizations = ("True" == sys.argv[4])
+    rust_dp = "../rust-dp"
+    if len(sys.argv) > 5:
+        dataset = sys.argv[5]
+    else:
+        dataset = "../rust-dp/data"
+    pods = 4
+
+    random.seed(seed)
+    fat_tree_network = FatTreeNetwork(pods=pods)
+
+    if generate_cost_file:
+        fat_tree_network.generate_costs("%s/cost_fat_tree_%s_pods_%s.csv" 
+                                        % (dataset, pods, seed))
+
+    if generate_action_seq:
+        os.system("cd %s; \
+                  ./target/debug/rust-dp --num-nodes 20 --num-steps 4 \
+                  --update-idx 0 1 2 3 4 5 8 9 12 13 16 17 \
+                  --cm-path %s/cost_fat_tree_%s_pods_%s.csv \
+                  --action-seq-path %s/action_seq_%s_pods_%s.csv" 
+                  % (rust_dp, dataset, str(pods), seed, dataset, str(pods), seed))
+        
+    if generate_visualizations:
+        fat_tree_network.generate_visualization("%s/action_seq_%s_pods_%s.csv" 
+                                                % (dataset, str(pods), seed), 
+                                                "%s/graph_fat_tree_%s_pods_%s" 
+                                                % (dataset, str(pods), seed))
+
+    fat_tree_network.generate_gcn_dataset()
