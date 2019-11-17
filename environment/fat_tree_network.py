@@ -414,6 +414,8 @@ class FatTreeNetwork:
         
         self.visualize_graph(self.baseline_graph, round(total_cost, 2), visual_file)
 
+        return round(total_cost, 2)
+
     def generate_gcn_dataset(self):
         # generate a quad-graph - with 4 types of nodes
         # Traffic Class (TC) <-> Paths (P) <-> Links(L) <-> Switches (S)
@@ -520,9 +522,14 @@ if __name__ == '__main__':
                   % (rust_dp, dataset, str(pods), seed, dataset, str(pods), seed))
         
     if generate_visualizations:
-        fat_tree_network.generate_visualization("%s/action_seq_%s_pods_%s.csv" 
+        total_cost = fat_tree_network.generate_visualization("%s/action_seq_%s_pods_%s.csv" 
                                                 % (dataset, str(pods), seed), 
                                                 "%s/graph_fat_tree_%s_pods_%s" 
                                                 % (dataset, str(pods), seed))
 
-    fat_tree_network.generate_gcn_dataset()
+    q_graph = fat_tree_network.generate_gcn_dataset()
+    gcn_yaml_file = "q_graph_fat_tree_%s_pods_%s.yaml" % (str(pods), seed)
+    nx.write_yaml(q_graph, "%s/%s" % (dataset,gcn_yaml_file))
+
+    f = open("%s/cost_gcn_dataset" % dataset, 'w+')
+    f.write("%s,%s\n" % (total_cost, gcn_yaml_file))
