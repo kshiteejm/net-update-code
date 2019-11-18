@@ -70,6 +70,13 @@ def train():
     monitor = SummaryWriter('./results/' +
         time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime()))
 
+    # normalize the input features
+    # TODO: normalize it before converting to torch tensor
+    for i in range(len(nodefeats_rows)):
+        nodefeats_rows[i][0] /= 4
+        nodefeats_rows[i][1] /= 10000
+        nodefeats_rows[i][3] /= 10000
+
     for n_iter in range(num_training_iterations):
 
         opt.zero_grad()
