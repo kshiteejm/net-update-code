@@ -88,7 +88,7 @@ def train():
 
             # backward
             loss.backward()
-        
+
         opt.step()
 
         monitor.add_scalar('Loss/loss_1', agg_loss[0].item(), n_iter)
