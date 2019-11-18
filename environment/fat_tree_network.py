@@ -186,9 +186,6 @@ class FatTreeNetwork:
     # generate the max min bw allocations for traffic between tor pairs
     # bi_graph: a bipartite graph with path nodes and link nodes
     def get_max_min_bw(self, bi_graph, debug=False):
-        if debug:
-            print("\n===PRINTING MAX-MIN BW===")
-
         fair_bw = dict() 
         if bi_graph.size() == 0:
             return fair_bw
@@ -386,9 +383,8 @@ class FatTreeNetwork:
 
         vg.render(visual_file, view=False)
 
-    def generate_visualization(self, optimal_action_seq_file, visual_file):
-        print(self.traffic_matrix)
-
+    def generate_visualization(self, optimal_action_seq_file, 
+                               visual_file, optimal_cost_action_file, num_steps):
         f = open(optimal_action_seq_file, 'r')
         action_seq = []
         for line in f.readlines():
@@ -396,27 +392,49 @@ class FatTreeNetwork:
                 continue
             switch_set = line[:-1]
             switch_set = switch_set.split(',')
-            print(switch_set)
             switch_set = [int(switch) for switch in switch_set]
             switch_set = set(switch_set)
             action_seq.append(switch_set)
+        f.close()
         print(action_seq)
         
         total_cost = 0
+        cost_action_pairs = []
         for switch_set in action_seq:
             bi_graph, paths = self.generate_bi_graph(switch_set)
             max_min_bw = self.get_max_min_bw(bi_graph, True)
             max_min_bw_matrix = self.get_traffic_class_bw_matrix(max_min_bw)
-            print(max_min_bw_matrix)
+            # print(max_min_bw_matrix)
             cost = self.get_cost(max_min_bw_matrix, self.baseline_bw_matrix)
             # cost = self.get_cost(max_min_bw_matrix, self.traffic_matrix)
+            cost_action_pairs.append((cost, switch_set))
             total_cost = total_cost + cost
         
         self.visualize_graph(self.baseline_graph, round(total_cost, 2), visual_file)
 
-        return round(total_cost, 2)
+        update_switch_set_left = set(self.update_switch_set)
+        num_steps_left = num_steps
+        cost_sum = 0
+        f = open(optimal_cost_action_file, 'w')
+        f.write("%s,%s,%s\n" % (num_steps, round(total_cost,2), str(self.update_switch_set)[:-1][1:]))
 
-    def generate_gcn_dataset(self):
+        for cost_action_pair in cost_action_pairs:
+            num_steps_left = num_steps_left - 1
+            cost_sum = cost_sum + cost_action_pair[0]
+            update_switch_set_left = update_switch_set_left.difference(cost_action_pair[1])
+            remaining_total_cost = total_cost - cost_sum
+            str_update_switch_set_left = str(update_switch_set_left)
+            if str_update_switch_set_left == 'set()':
+                str_update_switch_set_left = ''
+                f.write("%s,%s\n" % (num_steps_left, round(remaining_total_cost, 2)))
+            else:
+                str_update_switch_set_left = str_update_switch_set_left[:-1][1:]
+                f.write("%s,%s,%s\n" % (num_steps_left, round(remaining_total_cost, 2), 
+                                        str_update_switch_set_left))
+        f.close()
+
+    def generate_gcn_dataset(self, optimal_cost_action_file, 
+                             save_nodefeats_file, save_adjmats_file, save_cost_file):
         # generate a quad-graph - with 4 types of nodes
         # Traffic Class (TC) <-> Paths (P) <-> Links(L) <-> Switches (S)
         # TC raw feat = {traffic demand}
@@ -424,105 +442,126 @@ class FatTreeNetwork:
         # L raw feat = {capacity, used-capacity}
         # S raw feat = {}   
 
-        # create nodes and register node-indices for each node type
-        graph = self.baseline_graph
-        q_graph = nx.Graph()
-        tc = []
-        p = []
-        l = []
-        s = []
-        link_node_dict = dict()
-        tc_node_dict = dict()
-        node_id = 0
-        # initialize tc_node_dict
-        for src in range(self.num_tor_switches):
-            for dst in range(self.num_tor_switches):
-                if src != dst:
-                    tc_node_dict[(src, dst)] = []
-         
-        # initialize s
-        for node in graph.nodes:
-            q_graph.add_node(node_id, type='s', id=node, raw_feats=[0.0,0.0])
-            s.append(node_id)
-            node_id = node_id + 1
-        # initialize l
-        for edge in graph.edges:
-            q_graph.add_node(node_id, type='l', id=edge, 
-                             raw_feats=[graph.edges[edge]['capacity'], 
-                                       graph.edges[edge]['used_capacity']])
-            q_graph.add_edge(node_id, edge[0])
-            q_graph.add_edge(node_id, edge[1])
-            l.append(node_id)
-            link_node_dict[edge] = node_id
-            node_id = node_id + 1
-        # initialize p
-        for src in range(self.num_tor_switches):
-            for dst in range(self.num_tor_switches):
-                if src != dst:
-                    physical_src = self.get_tor_physical_id(src)
-                    physical_dst = self.get_tor_physical_id(dst)
-                    if nx.has_path(graph, physical_src, physical_dst):
-                        path_num = 0
-                        for path in nx.all_shortest_paths(graph, physical_src, physical_dst):
-                            q_graph.add_node(node_id, type='p', id=(src,dst,path_num), 
-                                             raw_feats=[0.0,0.0])
-                            for j in range(1, len(path)):
-                                i = j - 1
-                                path_src = path[i]
-                                path_dst = path[j]
-                                q_graph.add_edge(node_id, link_node_dict[(path_src, path_dst)])
-                            p.append(node_id)
-                            tc_node_dict[(src, dst)].append(node_id)
-                            node_id = node_id + 1
-                            path_num = path_num + 1
-        # initialize tc
-        for src in range(self.num_tor_switches):
-            for dst in range(self.num_tor_switches):
-                if src != dst:
-                    q_graph.add_node(node_id, type='tc', id=(src,dst), 
-                                         raw_feats=[self.traffic_matrix[src][dst],0.0])
-                    for p_node_id in tc_node_dict[(src, dst)]:
-                        q_graph.add_edge(node_id, p_node_id)
-                    tc.append(node_id)
-                    node_id = node_id + 1
-        # number of total nodes * 2 
-        s_node_features = np.zeros((len(q_graph.nodes), 2))
-        l_node_features = np.zeros((len(q_graph.nodes), 2))
-        p_node_features = np.zeros((len(q_graph.nodes), 2))
-        tc_node_features = np.zeros((len(q_graph.nodes), 2))
-        for node_id in s:
-            s_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
-            s_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
-        for node_id in l:
-            l_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
-            l_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
-        for node_id in p:
-            p_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
-            p_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
-        for node_id in tc:
-            tc_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
-            tc_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+        f = open(optimal_cost_action_file, 'r')
+        gcn_dataset = []
+        for line in f.readlines():
+            line = line[:-1]
+            triplet = [x.strip() for x in line.split(',')] 
+            num_steps_left = float(triplet[0])
+            remaining_total_cost = float(triplet[1])
+            update_switch_set_left = set()
+            for i in range(2, len(triplet)):
+                update_switch_set_left.add(int(triplet[i]))
+            gcn_dataset.append((num_steps_left, remaining_total_cost, update_switch_set_left))
+        f.close()
 
-        s_adj_matrix = nx.adjacency_matrix(q_graph).todense()
-        l_adj_matrix = nx.adjacency_matrix(q_graph).todense()
-        p_adj_matrix = nx.adjacency_matrix(q_graph).todense()
-        tc_adj_matrix = nx.adjacency_matrix(q_graph).todense()        
-        all_nodes = set(q_graph.nodes)
-        for i in all_nodes.difference(set(s)):
-            s_adj_matrix[i] = 0
-        for i in all_nodes.difference(set(l)):
-            l_adj_matrix[i] = 0
-        for i in all_nodes.difference(set(p)):
-            p_adj_matrix[i] = 0
-        for i in all_nodes.difference(set(tc)):
-            tc_adj_matrix[i] = 0
+        for gcn_datum in gcn_dataset:
+            num_steps = gcn_datum[0]
+            total_cost = gcn_datum[1]
+            update_switch_set = gcn_datum[2]
 
-        np.save("nodes_datum", 
-            [s_node_features, l_node_features, p_node_features, tc_node_features])
-        np.save("adj_mat_datum", 
-            [s_adj_matrix, l_adj_matrix, p_adj_matrix, tc_adj_matrix])    
+            # create nodes and register node-indices for each node type
+            graph = self.baseline_graph
+            q_graph = nx.Graph()
+            tc = []
+            p = []
+            l = []
+            s = []
+            link_node_dict = dict()
+            tc_node_dict = dict()
+            node_id = 0
+            # initialize tc_node_dict
+            for src in range(self.num_tor_switches):
+                for dst in range(self.num_tor_switches):
+                    if src != dst:
+                        tc_node_dict[(src, dst)] = []
+            
+            # initialize s
+            for node in graph.nodes:
+                to_update = 0.0
+                if node in update_switch_set:
+                    to_update = 1.0
+                q_graph.add_node(node_id, type='s', id=node, raw_feats=[to_update,num_steps])
+                s.append(node_id)
+                node_id = node_id + 1
+            # initialize l
+            for edge in graph.edges:
+                q_graph.add_node(node_id, type='l', id=edge, 
+                                raw_feats=[graph.edges[edge]['capacity'], 
+                                        graph.edges[edge]['used_capacity']])
+                q_graph.add_edge(node_id, edge[0])
+                q_graph.add_edge(node_id, edge[1])
+                l.append(node_id)
+                link_node_dict[edge] = node_id
+                node_id = node_id + 1
+            # initialize p
+            for src in range(self.num_tor_switches):
+                for dst in range(self.num_tor_switches):
+                    if src != dst:
+                        physical_src = self.get_tor_physical_id(src)
+                        physical_dst = self.get_tor_physical_id(dst)
+                        if nx.has_path(graph, physical_src, physical_dst):
+                            path_num = 0
+                            for path in nx.all_shortest_paths(graph, physical_src, physical_dst):
+                                q_graph.add_node(node_id, type='p', id=(src,dst,path_num), 
+                                                raw_feats=[0.0,0.0])
+                                for j in range(1, len(path)):
+                                    i = j - 1
+                                    path_src = path[i]
+                                    path_dst = path[j]
+                                    q_graph.add_edge(node_id, link_node_dict[(path_src, path_dst)])
+                                p.append(node_id)
+                                tc_node_dict[(src, dst)].append(node_id)
+                                node_id = node_id + 1
+                                path_num = path_num + 1
+            # initialize tc
+            for src in range(self.num_tor_switches):
+                for dst in range(self.num_tor_switches):
+                    if src != dst:
+                        q_graph.add_node(node_id, type='tc', id=(src,dst), 
+                                            raw_feats=[self.traffic_matrix[src][dst],0.0])
+                        for p_node_id in tc_node_dict[(src, dst)]:
+                            q_graph.add_edge(node_id, p_node_id)
+                        tc.append(node_id)
+                        node_id = node_id + 1
+            # number of total nodes * 2 
+            s_node_features = np.zeros((len(q_graph.nodes), 2))
+            l_node_features = np.zeros((len(q_graph.nodes), 2))
+            p_node_features = np.zeros((len(q_graph.nodes), 2))
+            tc_node_features = np.zeros((len(q_graph.nodes), 2))
+            for node_id in s:
+                s_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+                s_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+            for node_id in l:
+                l_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+                l_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+            for node_id in p:
+                p_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+                p_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
+            for node_id in tc:
+                tc_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
+                tc_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
 
-        return q_graph
+            s_adj_matrix = nx.adjacency_matrix(q_graph).todense()
+            l_adj_matrix = nx.adjacency_matrix(q_graph).todense()
+            p_adj_matrix = nx.adjacency_matrix(q_graph).todense()
+            tc_adj_matrix = nx.adjacency_matrix(q_graph).todense()        
+            all_nodes = set(q_graph.nodes)
+            for i in all_nodes.difference(set(s)):
+                s_adj_matrix[i] = 0
+            for i in all_nodes.difference(set(l)):
+                l_adj_matrix[i] = 0
+            for i in all_nodes.difference(set(p)):
+                p_adj_matrix[i] = 0
+            for i in all_nodes.difference(set(tc)):
+                tc_adj_matrix[i] = 0
+
+            np.save("%s_%s" % (save_nodefeats_file, int(num_steps)), 
+                [s_node_features, l_node_features, p_node_features, tc_node_features])
+            np.save("%s_%s" % (save_adjmats_file, int(num_steps)), 
+                [s_adj_matrix, l_adj_matrix, p_adj_matrix, tc_adj_matrix])
+            np.save("%s_%s" % (save_cost_file, int(num_steps)),
+                [total_cost])
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
@@ -540,8 +579,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 5:
         dataset = sys.argv[5]
     else:
-        dataset = "../rust-dp/data"
+        dataset = "../data"
     pods = 4
+    num_steps = 4
     total_cost = 0.0
 
     random.seed(seed)
@@ -553,22 +593,24 @@ if __name__ == '__main__':
 
     if generate_action_seq:
         os.system("cd %s; \
-                  ./target/debug/rust-dp --num-nodes 20 --num-steps 4 \
+                  ./target/debug/rust-dp --num-nodes 20 --num-steps %s \
                   --update-idx 0 1 2 3 4 5 8 9 12 13 16 17 \
                   --cm-path %s/cost_fat_tree_%s_pods_%s.csv \
                   --action-seq-path %s/action_seq_%s_pods_%s.csv" 
-                  % (rust_dp, dataset, str(pods), seed, dataset, str(pods), seed))
-        
+                  % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed))
+    
+    optimal_cost_action_file = "%s/opt_cost_actions_%s_pods_%s.csv" % (dataset, pods, seed)
     if generate_visualizations:
-        total_cost = fat_tree_network.generate_visualization("%s/action_seq_%s_pods_%s.csv" 
-                                                % (dataset, str(pods), seed), 
-                                                "%s/graph_fat_tree_%s_pods_%s" 
-                                                % (dataset, str(pods), seed))
+        fat_tree_network.generate_visualization(
+                            "%s/action_seq_%s_pods_%s.csv" 
+                            % (dataset, pods, seed), 
+                            "%s/graph_fat_tree_%s_pods_%s" 
+                            % (dataset, pods, seed),
+                            optimal_cost_action_file, 
+                            num_steps)
 
-    q_graph = fat_tree_network.generate_gcn_dataset()
-    gcn_yaml_file = "q_graph_fat_tree_%s_pods_%s.yaml" % (str(pods), seed)
-    nx.write_yaml(q_graph, "%s/%s" % (dataset,gcn_yaml_file))
-
-    f = open("%s/cost_gcn_dataset" % dataset, 'w+')
-    f.write("%s,%s\n" % (total_cost, gcn_yaml_file))
-    f.close()
+    save_nodefeats_file =  "%s/nodefeats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
+    save_adjmats_file =  "%s/adjmats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
+    save_cost_file = "%s/cost_fat_tree_%s_pods_%s" % (dataset, pods, seed)
+    fat_tree_network.generate_gcn_dataset(optimal_cost_action_file, save_nodefeats_file, 
+                                          save_adjmats_file, save_cost_file)
