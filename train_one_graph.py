@@ -44,9 +44,8 @@ def train():
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         cost_rows.append(
-            # [torch.FloatTensor(nf) \
-            # for nf in np.load(f)])
-            torch.FloatTensor([0]))
+            torch.FloatTensor(np.load(f)))
+            # torch.FloatTensor([0]))
 
     assert(len(nodefeats_rows) == len(adjmats_rows))
     assert(len(adjmats_rows) == len(cost_rows))

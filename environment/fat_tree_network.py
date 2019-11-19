@@ -588,14 +588,14 @@ if __name__ == '__main__':
     fat_tree_network = FatTreeNetwork(pods=pods)
 
     if generate_cost_file:
-        fat_tree_network.generate_costs("%s/cost_fat_tree_%s_pods_%s.csv" 
+        fat_tree_network.generate_costs("%s/costs_fat_tree_%s_pods_%s.csv" 
                                         % (dataset, pods, seed))
 
     if generate_action_seq:
         os.system("cd %s; \
                   ./target/debug/rust-dp --num-nodes 20 --num-steps %s \
                   --update-idx 0 1 2 3 4 5 8 9 12 13 16 17 \
-                  --cm-path %s/cost_fat_tree_%s_pods_%s.csv \
+                  --cm-path %s/costs_fat_tree_%s_pods_%s.csv \
                   --action-seq-path %s/action_seq_%s_pods_%s.csv" 
                   % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed))
     
