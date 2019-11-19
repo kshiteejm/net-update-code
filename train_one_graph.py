@@ -35,12 +35,13 @@ def train():
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
         # normalize
-        row[0] /= num_steps
+        row[0][:,1] /= num_steps
         row[1] /= max_link_bw
-        row[2] /= max_link_bw
+        row[3] /= max_link_bw
         nodefeats_rows.append(
             [torch.FloatTensor(nf) \
             for nf in row])
+    print("Finished Reading Node Features...")
 
     adjmats_rows = []
     for f in adjmats_file_list:
@@ -48,13 +49,15 @@ def train():
         adjmats_rows.append(
             [torch.FloatTensor(nf) \
             for nf in np.load(f)])
+    print("Finished Reading Adjacency Matrices...")
 
     cost_rows = []
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         cost_rows.append(
             torch.FloatTensor(np.load(f)))
-
+    print("Finished Reading Optimal Costs...")
+    
     assert(len(nodefeats_rows) == len(adjmats_rows))
     assert(len(adjmats_rows) == len(cost_rows))
 
