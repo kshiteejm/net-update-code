@@ -59,7 +59,7 @@ def train():
                         n_hids=[16, 32],
                         h_size=8,
                         n_steps=8, 
-                        layer_norm_on = False)
+                        layer_norm_on=False)
 
     opt = torch.optim.Adam(mgcn_value.parameters(), lr=1e-3)
 
