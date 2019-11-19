@@ -596,8 +596,11 @@ if __name__ == '__main__':
                   ./target/debug/rust-dp --num-nodes 20 --num-steps %s \
                   --update-idx 0 1 2 3 4 5 8 9 12 13 16 17 \
                   --cm-path %s/costs_fat_tree_%s_pods_%s.csv \
-                  --action-seq-path %s/action_seq_%s_pods_%s.csv" 
-                  % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed))
+                  --action-seq-path %s/action_seq_%s_pods_%s.csv \
+                  --action-path %s/actions_%s_pods_%s.csv \
+                  --value-path %s/values_%s_pods_%s.csv" 
+                  % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed,
+                  dataset, pods, seed, dataset, pods, seed))
     
     optimal_cost_action_file = "%s/opt_cost_actions_%s_pods_%s.csv" % (dataset, pods, seed)
     if generate_visualizations:
