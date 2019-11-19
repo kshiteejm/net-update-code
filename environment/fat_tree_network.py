@@ -69,7 +69,7 @@ class FatTreeNetwork:
             for dst in range(num_tor_switches):
                 if src == dst:
                     continue
-                self.traffic_matrix[src][dst] = float(random.randint(1000, 1000))
+                self.traffic_matrix[src][dst] = float(random.randint(1250, 2500))
         
         print(np.sum(self.traffic_matrix))
 
