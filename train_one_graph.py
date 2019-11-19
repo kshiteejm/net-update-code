@@ -101,7 +101,7 @@ def train():
         for i in range(len(training_indexes)):
             if i > 0 and i%32 == 0:
                 monitor.add_scalar('Loss/train_loss', batch_loss, n_iter)
-                loss = 0.0
+                batch_loss = 0.0
                 opt.step()
                 opt.zero_grad()
             
