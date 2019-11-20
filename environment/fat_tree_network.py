@@ -69,7 +69,7 @@ class FatTreeNetwork:
             for dst in range(num_tor_switches):
                 if src == dst:
                     continue
-                self.traffic_matrix[src][dst] = float(random.randint(1000, 1000))
+                self.traffic_matrix[src][dst] = float(random.randint(1250, 2500))
         
         print(np.sum(self.traffic_matrix))
 
@@ -588,16 +588,19 @@ if __name__ == '__main__':
     fat_tree_network = FatTreeNetwork(pods=pods)
 
     if generate_cost_file:
-        fat_tree_network.generate_costs("%s/cost_fat_tree_%s_pods_%s.csv" 
+        fat_tree_network.generate_costs("%s/costs_fat_tree_%s_pods_%s.csv" 
                                         % (dataset, pods, seed))
 
     if generate_action_seq:
         os.system("cd %s; \
                   ./target/debug/rust-dp --num-nodes 20 --num-steps %s \
                   --update-idx 0 1 2 3 4 5 8 9 12 13 16 17 \
-                  --cm-path %s/cost_fat_tree_%s_pods_%s.csv \
-                  --action-seq-path %s/action_seq_%s_pods_%s.csv" 
-                  % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed))
+                  --cm-path %s/costs_fat_tree_%s_pods_%s.csv \
+                  --action-seq-path %s/action_seq_%s_pods_%s.csv \
+                  --action-path %s/actions_%s_pods_%s.csv \
+                  --value-path %s/values_%s_pods_%s.csv" 
+                  % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed,
+                  dataset, pods, seed, dataset, pods, seed))
     
     optimal_cost_action_file = "%s/opt_cost_actions_%s_pods_%s.csv" % (dataset, pods, seed)
     if generate_visualizations:

@@ -109,6 +109,14 @@ runs/*
 runs_*/*
 *.code-workspace
 *.png
+rust-dp/data/*
 
 # rust compilation lock
 Cargo.lock
+
+# mac specific
+*.DS_Store
+
+# pytorch specific
+results/
+*.pt
