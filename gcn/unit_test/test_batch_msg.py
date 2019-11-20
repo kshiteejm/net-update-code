@@ -31,7 +31,10 @@ class TestBatchMessagePassing(unittest.TestCase):
         # 3rd dim: features
         in_vec_1 = torch.FloatTensor([[[1,2,3],[0,0,0]],[[2,4,6],[0,0,0]]])
         in_vec_2 = torch.FloatTensor([[[0,0,0],[1,2,3]],[[0,0,0],[2,4,6]]])
-        # batch * num_nodes * num_nodes
+        # list: types
+        # 1st dim: batch
+        # 2nd dim: nodes
+        # 3rd dim: nodes
         adj_mats_1 = torch.FloatTensor([[[0,1],[0,0]],[[0,1],[0,0]]])
         adj_mats_2 = torch.FloatTensor([[[0,0],[1,0]],[[0,0],[1,0]]])
 

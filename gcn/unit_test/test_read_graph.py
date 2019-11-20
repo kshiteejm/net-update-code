@@ -95,12 +95,6 @@ class TestReadGraph(unittest.TestCase):
                     switch_idx[i, :] = i
                 switch_idx = torch.LongTensor(switch_idx)
 
-                # per switch gcn output to hid
-                f = FullyConnectNN(8, [16, 16], 8)
-
-                # map aggregated hid to single number
-                g = FullyConnectNN(8, [16], 1)
-
                 # gather switch output
                 switch_out = gcn_out.gather(0, switch_idx)
 
