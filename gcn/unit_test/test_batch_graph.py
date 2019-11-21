@@ -27,6 +27,7 @@ class TestBatchGraph(unittest.TestCase):
             for adj in self.batch_adj_mats]
 
         self.mgcn_value = Batch_MGCN_Value(
+            n_switches=20,
             n_feats=[2, 2, 2, 2],
             n_output=8,
             n_hids=[16, 32],
@@ -41,15 +42,8 @@ class TestBatchGraph(unittest.TestCase):
         # .parameters() for the optimizer
         opt = torch.optim.Adam(self.mgcn_value.parameters(), lr=1e-3)
 
-        # assume switch is 0-19
-        switch_idx = np.ones([32, 20, 8])
-        for i in range(20):
-            switch_idx[:, i, :] = i
-        switch_idx = torch.LongTensor(switch_idx)
-
         switch_out = self.mgcn_value(self.node_feats_torch,
-                                     self.adj_mats_torch,
-                                     switch_idx)
+                                     self.adj_mats_torch)
 
         # assume ground truth is 4
         switch_out_target = torch.FloatTensor([[4] for _ in range(32)])
