@@ -117,12 +117,12 @@ def train():
                 batch_node_feats = []
                 batch_adj_mats = []
                 batch_cost_target = []
-                for _ in num_types:
+                for _ in range(num_types):
                     batch_node_feats.append([])
                     batch_adj_mats.append([])
             
             index = training_indexes[i]
-            for type_i in num_types:
+            for type_i in range(num_types):
                 batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
                 batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
             batch_cost_target.append(cost_rows[index])
