@@ -54,7 +54,7 @@ def train():
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        cost_rows.append([row])
+        cost_rows.append(row)
     print("Finished Reading Optimal Costs...")
     
     assert(len(nodefeats_rows) == len(adjmats_rows))
