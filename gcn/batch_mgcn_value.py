@@ -17,7 +17,9 @@ class Batch_MGCN_Value(nn.Module):
                               n_output=n_output,
                               n_hids=n_hids,
                               h_size=h_size,
-                              n_steps=n_steps)
+                              n_steps=n_steps,
+                              act=act,
+                              layer_norm_on=layer_norm_on)
 
         self.f_gcn_out = FullyConnectNN(n_output, n_hids, n_output)
         self.g_gcn_out = FullyConnectNN(n_output, n_hids, 1,
