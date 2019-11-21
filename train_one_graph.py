@@ -93,10 +93,12 @@ def train():
 
     n_iter = 0
     for n_epoch in range(num_epochs):
+        last = time.time()
         random.shuffle(training_indexes)
         opt.zero_grad()
         batch_loss = 0.0
         validation_loss = 0.0
+        
         
         for i in range(len(training_indexes)):
             if i > 0 and i%32 == 0:
@@ -121,6 +123,9 @@ def train():
             # backward
             loss.backward()
             n_iter = n_iter + 1
+        now = time.time()
+        print("single training epoch time: %s" % (now - last))
+        last = now
 
         for i in range(len(validation_indexes)):
             index = validation_indexes[i]
@@ -136,8 +141,11 @@ def train():
             validation_loss = loss.data.item() + validation_loss
         
         monitor.add_scalar('Loss/validation_loss', validation_loss, n_iter)
+        now = time.time()
+        print("single validation time: %s" % (now - last))
+        last = now
 
-    torch.save(mgcn_value.state_dict(), "model.pt")
+    torch.save(mgcn_value.state_dict(), "model_trained.pt")
 
 if __name__ == '__main__':
     random.seed(42)
