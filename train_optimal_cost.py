@@ -109,7 +109,7 @@ def train():
                     batch_loss = loss.data.item()
                     monitor.add_scalar('Loss/train_loss', batch_loss, n_iter)
                     
-                    accuracy = ((batch_cost_estimate - cost_target_torch) / cost_target_torch + 10e-6).mean()
+                    accuracy = ((batch_cost_estimate - cost_target_torch) / cost_target_torch + 10e-3).mean()
                     monitor.add_scalar('Loss/train_accuracy', accuracy.item(), n_iter)
 
                     # backward
@@ -162,7 +162,7 @@ def train():
         
         monitor.add_scalar('Loss/validation_loss', validation_loss, n_iter)
 
-        accuracy = ((batch_cost_estimate - cost_target_torch) / cost_target_torch + 10e-6).mean()
+        accuracy = ((batch_cost_estimate - cost_target_torch) / cost_target_torch + 10e-3).mean()
         monitor.add_scalar('Loss/validation_accuracy', accuracy.item(), n_iter)
         
         proj_done_time.update_progress(n_epoch, message="validation")
