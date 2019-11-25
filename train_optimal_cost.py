@@ -109,6 +109,9 @@ def train():
                     batch_loss = loss.data.item()
                     monitor.add_scalar('Loss/train_loss', batch_loss, n_iter)
                     
+                    accuracy = ((batch_cost_estimate - cost_target_torch) / cost_target_torch + 10e-6).mean()
+                    monitor.add_scalar('Loss/train_accuracy', accuracy.item(), n_iter)
+
                     # backward
                     opt.zero_grad()
                     loss.backward()
@@ -158,6 +161,10 @@ def train():
         validation_loss = loss.data.item()
         
         monitor.add_scalar('Loss/validation_loss', validation_loss, n_iter)
+
+        accuracy = ((batch_cost_estimate - cost_target_torch) / cost_target_torch + 10e-6).mean()
+        monitor.add_scalar('Loss/validation_accuracy', accuracy.item(), n_iter)
+        
         proj_done_time.update_progress(n_epoch, message="validation")
 
     torch.save(mgcn_value.state_dict(), "model_trained.pt")

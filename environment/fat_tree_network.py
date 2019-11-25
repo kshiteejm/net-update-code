@@ -233,7 +233,9 @@ class FatTreeNetwork:
     # the cost function is a linear cost function at the moment
     def get_cost(self, max_min_bw_matrix, baseline_bw_matrix):
         cost = np.sum(abs(baseline_bw_matrix - max_min_bw_matrix))
-        return cost
+        # max_cost = np.sum(baseline_bw_matrix)
+        max_cost = 1.0
+        return cost/max_cost
 
     # generate baselines with all switches active
     def generate_baseline_bws(self):
