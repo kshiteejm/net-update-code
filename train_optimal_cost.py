@@ -9,6 +9,7 @@ from gcn.batch_mgcn_value import Batch_MGCN_Value
 from gcn.layers import FullyConnectNN
 import random
 from torch.utils.tensorboard import SummaryWriter
+from utils.weight_scale import get_param_scale
 
 
 def train():
@@ -159,7 +160,11 @@ def train():
         # l2 loss
         loss = l2_loss(batch_cost_estimate, cost_target_torch)
         validation_loss = loss.data.item()
-        
+
+        param_mean, param_max = get_param_scale(mgcn_value)
+        monitor.add_scalar('Parameters/parammeter_mean', param_mean, n_iter)
+        monitor.add_scalar('Parameters/parammeter_max', param_max, n_iter)
+
         monitor.add_scalar('Loss/validation_loss', validation_loss, n_iter)
 
         accuracy = ((batch_cost_estimate - cost_target_torch) / (cost_target_torch + 1e-4)).mean()
