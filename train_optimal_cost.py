@@ -19,7 +19,7 @@ def train():
     bisection_bw = 160000
 
     # read dataset
-    is_single = True
+    is_single = False
     dataset = "/data/kshiteej/net-update-data"
     if is_single: 
         dataset = "/data/kshiteej/net-update-data-single"
