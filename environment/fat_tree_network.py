@@ -82,6 +82,8 @@ class FatTreeNetwork:
 
         self.baseline_bw_matrix, self.baseline_graph = self.generate_baseline_bws()
 
+        self.bisection_bw = self.num_tor_switches * pods//2 * link_bw
+
     # helper functions to get a physical id from a logical id
     # physical id = node index in the networkx graph datastructure
     # logical id = [0 ... num_switches_of_that_type)
@@ -234,7 +236,7 @@ class FatTreeNetwork:
     def get_cost(self, max_min_bw_matrix, baseline_bw_matrix):
         cost = np.sum(abs(baseline_bw_matrix - max_min_bw_matrix))
         # max_cost = np.sum(baseline_bw_matrix)
-        max_cost = 1.0
+        max_cost = self.bisection_bw
         return cost/max_cost
 
     # generate baselines with all switches active
@@ -436,7 +438,8 @@ class FatTreeNetwork:
         f.close()
 
     def generate_gcn_dataset(self, optimal_cost_action_file, 
-                             save_nodefeats_file, save_adjmats_file, save_cost_file):
+                             save_nodefeats_file, save_adjmats_file, save_cost_file, 
+                             max_num_steps):
         # generate a quad-graph - with 4 types of nodes
         # Traffic Class (TC) <-> Paths (P) <-> Links(L) <-> Switches (S)
         # TC raw feat = {traffic demand}
@@ -483,14 +486,15 @@ class FatTreeNetwork:
                 to_update = 0.0
                 if node in update_switch_set:
                     to_update = 1.0
-                q_graph.add_node(node_id, type='s', id=node, raw_feats=[to_update,num_steps])
+                q_graph.add_node(node_id, type='s', id=node, 
+                                 raw_feats=[to_update,num_steps/max_num_steps])
                 s.append(node_id)
                 node_id = node_id + 1
             # initialize l
             for edge in graph.edges:
                 q_graph.add_node(node_id, type='l', id=edge, 
-                                raw_feats=[graph.edges[edge]['capacity'], 
-                                        graph.edges[edge]['used_capacity']])
+                                 raw_feats=[graph.edges[edge]['capacity']/self.link_bw, 
+                                            graph.edges[edge]['used_capacity']/self.link_bw])
                 q_graph.add_edge(node_id, edge[0])
                 q_graph.add_edge(node_id, edge[1])
                 l.append(node_id)
@@ -521,7 +525,7 @@ class FatTreeNetwork:
                 for dst in range(self.num_tor_switches):
                     if src != dst:
                         q_graph.add_node(node_id, type='tc', id=(src,dst), 
-                                            raw_feats=[self.traffic_matrix[src][dst],0.0])
+                                         raw_feats=[self.traffic_matrix[src][dst]/self.link_bw, 0.0])
                         for p_node_id in tc_node_dict[(src, dst)]:
                             q_graph.add_edge(node_id, p_node_id)
                         tc.append(node_id)
@@ -583,7 +587,7 @@ if __name__ == '__main__':
     else:
         dataset = "../data"
     pods = 4
-    num_steps = 4
+    max_num_steps = 4
     total_cost = 0.0
 
     random.seed(seed)
@@ -601,7 +605,7 @@ if __name__ == '__main__':
                   --action-seq-path %s/action_seq_%s_pods_%s.csv \
                   --action-path %s/actions_%s_pods_%s.csv \
                   --value-path %s/values_%s_pods_%s.csv" 
-                  % (rust_dp, num_steps, dataset, pods, seed, dataset, pods, seed,
+                  % (rust_dp, max_num_steps, dataset, pods, seed, dataset, pods, seed,
                   dataset, pods, seed, dataset, pods, seed))
     
     optimal_cost_action_file = "%s/opt_cost_actions_%s_pods_%s.csv" % (dataset, pods, seed)
@@ -612,10 +616,10 @@ if __name__ == '__main__':
                             "%s/graph_fat_tree_%s_pods_%s" 
                             % (dataset, pods, seed),
                             optimal_cost_action_file, 
-                            num_steps)
+                            max_num_steps)
 
     save_nodefeats_file =  "%s/nodefeats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_adjmats_file =  "%s/adjmats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_cost_file = "%s/cost_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     fat_tree_network.generate_gcn_dataset(optimal_cost_action_file, save_nodefeats_file, 
-                                          save_adjmats_file, save_cost_file)
+                                          save_adjmats_file, save_cost_file, max_num_steps)

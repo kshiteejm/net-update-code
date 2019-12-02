@@ -16,6 +16,7 @@ def train():
     pods = 4
     num_steps = 4
     max_link_bw = 10000
+    bisection_bw = 160000
 
     # read dataset
     dataset = "/data/kshiteej/net-update-data"
@@ -55,6 +56,8 @@ def train():
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
+        # normalize
+        row = row/bisection_bw
         cost_rows.append(row)
     print("Finished Reading Optimal Costs...")
     
