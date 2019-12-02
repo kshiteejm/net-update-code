@@ -19,7 +19,7 @@ def train():
     bisection_bw = 160000
 
     # read dataset
-    dataset = "/data/kshiteej/net-update-data"
+    dataset = "/data/kshiteej/net-update-data-single"
     file_list = os.listdir(dataset)
     
     substring = "nodefeats_fat_tree_%s_pods_" % pods
