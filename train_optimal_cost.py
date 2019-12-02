@@ -103,7 +103,7 @@ def train():
         validation_loss = 0.0
 
         for i in range(len(training_indexes)):
-            if i%32 == 0:
+            if i%32 == 0 or i == (len(training_indexes) - 1):
                 if i > 0:
                     node_feats_torch = [torch.FloatTensor(nf) \
                                         for nf in batch_node_feats]
