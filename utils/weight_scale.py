@@ -1,5 +1,5 @@
 import numpy as np
-from param import config
+# from param import config
 
 
 eps = 1e-6
