@@ -19,7 +19,10 @@ def train():
     bisection_bw = 160000
 
     # read dataset
-    dataset = "/data/kshiteej/net-update-data-single"
+    is_single = True
+    dataset = "/data/kshiteej/net-update-data"
+    if is_single: 
+        dataset = "/data/kshiteej/net-update-data-single"
     file_list = os.listdir(dataset)
     
     substring = "nodefeats_fat_tree_%s_pods_" % pods
@@ -83,6 +86,9 @@ def train():
     training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
+    if is_single:
+        training_indexes = list(range(0, len(cost_file_list)))
+        validation_indexes = list(range(0, len(cost_file_list)))
 
     print('Setting up monitoring...')
     monitor = SummaryWriter('./results/' +
@@ -113,7 +119,8 @@ def train():
                     batch_loss = loss.data.item()
                     monitor.add_scalar('Loss/train_loss', batch_loss, n_iter)
                     
-                    accuracy = ((batch_cost_estimate - cost_target_torch) / (cost_target_torch + 1e-4)).mean()
+                    accuracy = ((batch_cost_estimate - cost_target_torch) \
+                               / (cost_target_torch + 1e-6)).mean()
                     monitor.add_scalar('Loss/train_accuracy', accuracy.item(), n_iter)
 
                     # backward
@@ -170,7 +177,8 @@ def train():
 
         monitor.add_scalar('Loss/validation_loss', validation_loss, n_iter)
 
-        accuracy = ((batch_cost_estimate - cost_target_torch) / (cost_target_torch + 1e-4)).mean()
+        accuracy = ((batch_cost_estimate - cost_target_torch) \
+                   / (cost_target_torch + 1e-6)).mean()
         monitor.add_scalar('Loss/validation_accuracy', accuracy.item(), n_iter)
 
         proj_done_time.update_progress(n_epoch, message="validation")
