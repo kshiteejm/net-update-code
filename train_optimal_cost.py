@@ -183,7 +183,9 @@ def train():
 
         proj_done_time.update_progress(n_epoch, message="validation")
 
-    torch.save(mgcn_value.state_dict(), "model_trained.pt")
+        if n_epoch%10 == 0: 
+            torch.save(mgcn_value.state_dict(), "model_trained_%s_epoch.pt" % n_epoch)
+
 
 if __name__ == '__main__':
     random.seed(42)
