@@ -19,7 +19,7 @@ def train():
     bisection_bw = 160000
 
     # read dataset
-    is_single = True
+    is_single = False
     dataset = "/data/kshiteej/net-update-data"
     if is_single: 
         # dataset = "/data/kshiteej/net-update-data-single"
@@ -79,7 +79,7 @@ def train():
                         h_size=8,
                         n_steps=8, 
                         layer_norm_on=True)
-
+    
     opt = torch.optim.Adam(mgcn_value.parameters(), lr=1e-3)
 
     num_types = len(nodefeats_rows[0])
@@ -128,9 +128,6 @@ def train():
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
-
-                    import pdb
-                    pdb.set_trace()
                 
                 batch_node_feats = []
                 batch_adj_mats = []
@@ -191,6 +188,61 @@ def train():
             torch.save(mgcn_value.state_dict(), "model_trained_%s_epoch.pt" % n_epoch)
 
 def test(n_epoch): 
+    pods = 4
+    num_steps = 4
+    max_link_bw = 10000
+    bisection_bw = 160000
+
+    # read dataset
+    is_single = False
+    dataset = "/data/kshiteej/net-update-data"
+    if is_single: 
+        # dataset = "/data/kshiteej/net-update-data-single"
+        dataset = "./net-update-data-single"
+    file_list = os.listdir(dataset)
+    
+    substring = "nodefeats_fat_tree_%s_pods_" % pods
+    nodefeats_file_list = [item for item in file_list if substring in item]
+    nodefeats_file_list.sort()
+
+    substring = "adjmats_fat_tree_%s_pods_" % pods
+    adjmats_file_list = [item for item in file_list if substring in item]
+    adjmats_file_list.sort()
+
+    substring = "cost_fat_tree_%s_pods_" % pods
+    cost_file_list = [item for item in file_list if substring in item]
+    cost_file_list.sort()
+
+    nodefeats_rows = []
+    for f in nodefeats_file_list:
+        f = "%s/%s" % (dataset, f)
+        row = np.load(f)
+        # normalize
+        row[0][:,1] /= num_steps
+        row[1] /= max_link_bw
+        row[3] /= max_link_bw
+        nodefeats_rows.append(row)
+    print("Finished Reading Node Features...")
+
+    adjmats_rows = []
+    for f in adjmats_file_list:
+        f = "%s/%s" % (dataset, f)
+        row = np.load(f)
+        adjmats_rows.append(row)
+    print("Finished Reading Adjacency Matrices...")
+
+    cost_rows = []
+    for f in cost_file_list:
+        f = "%s/%s" % (dataset, f)
+        row = np.load(f)
+        # normalize
+        row = row/bisection_bw
+        cost_rows.append(row)
+    print("Finished Reading Optimal Costs...")
+    
+    assert(len(nodefeats_rows) == len(adjmats_rows))
+    assert(len(adjmats_rows) == len(cost_rows))
+
     mgcn_value = Batch_MGCN_Value(
                         n_switches=20,
                         n_feats=[2, 2, 2, 2],
@@ -204,6 +256,43 @@ def test(n_epoch):
     mgcn_value.load_state_dict(state_dicts)
     print("LOADED SUCCESSFULLY.")
 
+    num_types = len(nodefeats_rows[0])
+    num_epochs = 10000
+    training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
+    training_indexes = list(range(0, training_index_limit))
+    validation_indexes = list(range(training_index_limit, len(cost_file_list)))
+
+    batch_node_feats = []
+    batch_adj_mats = []
+    batch_cost_target = []
+    for _ in range(num_types):
+        batch_node_feats.append([])
+        batch_adj_mats.append([])
+    for i in range(len(validation_indexes)):
+        index = validation_indexes[i]
+        for type_i in range(num_types):
+            batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
+            batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
+        batch_cost_target.append(cost_rows[index])
+    
+    node_feats_torch = [torch.FloatTensor(nf) \
+                        for nf in batch_node_feats]
+    adj_mats_torch  = [torch.FloatTensor(adj) \
+                        for adj in batch_adj_mats]
+    cost_target_torch = torch.FloatTensor(batch_cost_target)
+
+    batch_cost_estimate = mgcn_value(
+        node_feats_torch, adj_mats_torch)
+
+    # l2 loss
+    # loss = l2_loss(batch_cost_estimate, cost_target_torch)
+    # validation_loss = loss.data.item()
+    
+    print(cost_target_torch)
+    print(batch_cost_estimate)
+
+    import pdb
+    pdb.set_trace()
 
 
 if __name__ == '__main__':
