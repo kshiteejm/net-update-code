@@ -262,6 +262,9 @@ def test(n_epoch):
     training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
+    if is_single:
+        training_indexes = list(range(0, len(cost_file_list)))
+        validation_indexes = list(range(0, len(cost_file_list)))
 
     batch_node_feats = []
     batch_adj_mats = []
@@ -286,14 +289,18 @@ def test(n_epoch):
         node_feats_torch, adj_mats_torch)
 
     # l2 loss
-    # loss = l2_loss(batch_cost_estimate, cost_target_torch)
-    # validation_loss = loss.data.item()
+    l2_loss = torch.nn.MSELoss(reduction='mean')
+    loss = l2_loss(batch_cost_estimate, cost_target_torch)
+    validation_loss = loss.data.item()
     
-    print(cost_target_torch)
-    print(batch_cost_estimate)
+    print('l2 loss: {}'.format(validation_loss))
 
-    import pdb
-    pdb.set_trace()
+    import matplotlib.pyplot as plt
+    plt.plot(cost_target_torch.detach().numpy())
+    plt.plot(batch_cost_estimate.detach().numpy())
+    plt.legend(['target', 'estimate'])
+    plt.title('l2 loss: {}'.format(validation_loss))
+    plt.savefig('./epoch_{}.png'.format(n_epoch))
 
 
 if __name__ == '__main__':
