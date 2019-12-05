@@ -295,6 +295,8 @@ def test(n_epoch):
     
     print('l2 loss: {}'.format(validation_loss))
 
+    import matplotlib
+    matplotlib.use('agg')
     import matplotlib.pyplot as plt
     plt.plot(cost_target_torch.detach().numpy())
     plt.plot(batch_cost_estimate.detach().numpy())
