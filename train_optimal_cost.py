@@ -19,10 +19,11 @@ def train():
     bisection_bw = 160000
 
     # read dataset
-    is_single = False
+    is_single = True
     dataset = "/data/kshiteej/net-update-data"
     if is_single: 
-        dataset = "/data/kshiteej/net-update-data-single"
+        # dataset = "/data/kshiteej/net-update-data-single"
+        dataset = "./net-update-data-single"
     file_list = os.listdir(dataset)
     
     substring = "nodefeats_fat_tree_%s_pods_" % pods
@@ -127,6 +128,9 @@ def train():
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
+
+                    import pdb
+                    pdb.set_trace()
                 
                 batch_node_feats = []
                 batch_adj_mats = []
@@ -186,7 +190,23 @@ def train():
         if n_epoch%10 == 0: 
             torch.save(mgcn_value.state_dict(), "model_trained_%s_epoch.pt" % n_epoch)
 
+def test(n_epoch): 
+    mgcn_value = Batch_MGCN_Value(
+                        n_switches=20,
+                        n_feats=[2, 2, 2, 2],
+                        n_output=8,
+                        n_hids=[16, 32],
+                        h_size=8,
+                        n_steps=8, 
+                        layer_norm_on=True)
+
+    state_dicts = torch.load("model_trained_%s_epoch.pt" % n_epoch)
+    mgcn_value.load_state_dict(state_dicts)
+    print("LOADED SUCCESSFULLY.")
+
+
 
 if __name__ == '__main__':
     random.seed(42)
-    train()
+    # train()
+    test(0)
