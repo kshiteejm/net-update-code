@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import ModuleList
 from gcn.layers import FullyConnectNN
 
 
@@ -24,8 +25,8 @@ class MultiMessagePassing(nn.Module):
         self.num_steps = num_steps
         self.num_types = len(in_feats)
 
-        self.fs = [FullyConnectNN(in_feat, n_hids, out_feats,
-            act, layer_norm_on) for in_feat in in_feats]
+        self.fs = ModuleList([FullyConnectNN(in_feat, n_hids, out_feats,
+            act, layer_norm_on) for in_feat in in_feats])
         self.g = FullyConnectNN(out_feats, n_hids, out_feats,
             act, layer_norm_on)
 

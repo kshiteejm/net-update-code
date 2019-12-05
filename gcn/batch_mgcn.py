@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn import ModuleList
 from gcn.layers import FullyConnectNN
 from gcn.batch_mmsg import BatchMultiMessagePassing
 
@@ -28,8 +29,8 @@ class BatchMGCN(nn.Module):
         super(BatchMGCN, self).__init__()
 
         # raise dimension for input vectors
-        self.raw = [FullyConnectNN(i, n_hids, h_size, act,
-                    layer_norm_on) for i in n_feats]
+        self.raw = ModuleList([FullyConnectNN(i, n_hids, h_size, act,
+                    layer_norm_on) for i in n_feats])
         # message passing step
         self.msg = BatchMultiMessagePassing(
             [h_size for _ in range(len(n_feats))], n_hids,
