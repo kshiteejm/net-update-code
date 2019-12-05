@@ -84,7 +84,7 @@ def train():
     opt = torch.optim.Adam(mgcn_value.parameters(), lr=1e-3)
 
     num_types = len(nodefeats_rows[0])
-    num_epochs = 10000
+    num_epochs = 401
     training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
@@ -99,6 +99,9 @@ def train():
     n_iter = 0
     proj_done_time = ProjectFinishTime(num_epochs, same_line=False)
     for n_epoch in range(num_epochs):
+        if n_epoch%10 == 0: 
+            torch.save(mgcn_value.state_dict(), "model_trained_%s_epoch.pt" % n_epoch)
+        
         random.shuffle(training_indexes)
         opt.zero_grad()
         batch_loss = 0.0
@@ -106,6 +109,13 @@ def train():
 
         for i in range(len(training_indexes)):
             if i%32 == 0 or i == (len(training_indexes) - 1):
+                if i == (len(training_indexes) - 1): 
+                    index = training_indexes[i]
+                    for type_i in range(num_types):
+                        batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
+                        batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
+                    batch_cost_target.append(cost_rows[index])
+                
                 if i > 0:
                     node_feats_torch = [torch.FloatTensor(nf) \
                                         for nf in batch_node_feats]
@@ -124,6 +134,9 @@ def train():
                     accuracy = ((batch_cost_estimate - cost_target_torch) \
                                / (cost_target_torch + 1e-6)).mean()
                     monitor.add_scalar('Loss/train_accuracy', accuracy.item(), n_iter)
+
+                    maxima = max(abs(batch_cost_estimate - cost_target_torch))
+                    monitor.add_scalar('Loss/train_max_diff', maxima.item(), n_iter)
 
                     # backward
                     opt.zero_grad()
@@ -174,19 +187,19 @@ def train():
         validation_loss = loss.data.item()
 
         param_mean, param_max = get_param_scale(mgcn_value)
-        monitor.add_scalar('Parameters/parammeter_mean', param_mean, n_iter)
-        monitor.add_scalar('Parameters/parammeter_max', param_max, n_iter)
+        monitor.add_scalar('Parameters/parameter_mean', param_mean, n_epoch)
+        monitor.add_scalar('Parameters/parameter_max', param_max, n_epoch)
 
-        monitor.add_scalar('Loss/validation_loss', validation_loss, n_iter)
+        monitor.add_scalar('Loss/validation_loss', validation_loss, n_epoch)
 
         accuracy = ((batch_cost_estimate - cost_target_torch) \
                    / (cost_target_torch + 1e-6)).mean()
-        monitor.add_scalar('Loss/validation_accuracy', accuracy.item(), n_iter)
+        monitor.add_scalar('Loss/validation_accuracy', accuracy.item(), n_epoch)
+
+        maxima = max(abs(batch_cost_estimate - cost_target_torch))
+        monitor.add_scalar('Loss/validation_max_diff', maxima.item(), n_epoch)
 
         proj_done_time.update_progress(n_epoch, message="validation")
-
-        if n_epoch%10 == 0: 
-            torch.save(mgcn_value.state_dict(), "model_trained_%s_epoch.pt" % n_epoch)
 
 def test(n_epoch): 
     pods = 4
@@ -307,6 +320,6 @@ def test(n_epoch):
 
 if __name__ == '__main__':
     random.seed(42)
-    # train()
-    n_epoch = int(sys.argv[1])
-    test(n_epoch)
+    train()
+    # n_epoch = int(sys.argv[1])
+    # test(n_epoch)
