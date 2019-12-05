@@ -10,6 +10,7 @@ from gcn.layers import FullyConnectNN
 import random
 from torch.utils.tensorboard import SummaryWriter
 from utils.weight_scale import get_param_scale
+import sys
 
 
 def train():
@@ -298,4 +299,5 @@ def test(n_epoch):
 if __name__ == '__main__':
     random.seed(42)
     # train()
-    test(0)
+    n_epoch = int(sys.argv[1])
+    test(n_epoch)
