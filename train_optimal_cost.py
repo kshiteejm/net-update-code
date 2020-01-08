@@ -13,7 +13,7 @@ from utils.weight_scale import get_param_scale
 import sys
 
 
-def train():
+def train(dataset):
     pods = 4
     num_steps = 4
     max_link_bw = 10000
@@ -21,7 +21,7 @@ def train():
 
     # read dataset
     is_single = False
-    dataset = "/data/kshiteej/net-update-data"
+    # dataset = "/data/kshiteej/net-update-data"
     if is_single: 
         # dataset = "/data/kshiteej/net-update-data-single"
         dataset = "./net-update-data-single"
@@ -43,10 +43,10 @@ def train():
     for f in nodefeats_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        # normalize
-        row[0][:,1] /= num_steps
-        row[1] /= max_link_bw
-        row[3] /= max_link_bw
+        # # normalize
+        # row[0][:,1] /= num_steps
+        # row[1] /= max_link_bw
+        # row[3] /= max_link_bw
         nodefeats_rows.append(row)
     print("Finished Reading Node Features...")
 
@@ -61,8 +61,8 @@ def train():
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        # normalize
-        row = row/bisection_bw
+        # # normalize
+        # row = row/bisection_bw
         cost_rows.append(row)
     print("Finished Reading Optimal Costs...")
     
@@ -320,6 +320,7 @@ def test(n_epoch):
 
 if __name__ == '__main__':
     random.seed(42)
-    train()
+    dataset = sys.argv[1]
+    train(dataset)
     # n_epoch = int(sys.argv[1])
     # test(n_epoch)
