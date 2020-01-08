@@ -211,11 +211,11 @@ if __name__ == '__main__':
     total_cost = 0.0
 
     random.seed(seed)
-    dataset = Dataset(pods=pods)
+    dataset_generator = Dataset(pods=pods)
 
     if generate_cost_file:
-        dataset.generate_costs("%s/costs_fat_tree_%s_pods_%s.csv" 
-                               % (dataset, pods, seed))
+        dataset_generator.generate_costs("%s/costs_fat_tree_%s_pods_%s.csv" 
+                                         % (dataset, pods, seed))
 
     if generate_action_seq:
         os.system("cd %s; \
@@ -241,5 +241,5 @@ if __name__ == '__main__':
     save_nodefeats_file =  "%s/nodefeats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_adjmats_file =  "%s/adjmats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_cost_file = "%s/cost_fat_tree_%s_pods_%s" % (dataset, pods, seed)
-    dataset.generate_gcn_dataset(optimal_cost_action_file, save_nodefeats_file, 
+    dataset_generator.generate_gcn_dataset(optimal_cost_action_file, save_nodefeats_file, 
                                  save_adjmats_file, save_cost_file, max_num_steps)
