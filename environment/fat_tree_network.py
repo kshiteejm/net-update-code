@@ -9,8 +9,6 @@ import sys, traceback
 from graphviz import Graph, Digraph
 from IPython.display import display
 
-from .traffic_distribution import TrafficDistribution
-
 class FatTreeNetwork:
     def __init__(self, pods=4, link_bw=10000.0):
         self.pods = pods
