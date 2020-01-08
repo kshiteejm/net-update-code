@@ -3,11 +3,11 @@ import numpy as np
 import os, sys
 import networkx as nx
 
-from .helpers import powerset, get_baseline_bw_matrix
-from .fat_tree_network import FatTreeNetwork
-from .traffic_distribution import TrafficDistribution
-from .waterfilling import MaxMinFairBW
-from .cost_function import CostFunction
+from helpers import powerset, get_baseline_bw_matrix
+from fat_tree_network import FatTreeNetwork
+from traffic_distribution import TrafficDistribution
+from waterfilling import MaxMinFairBW
+from cost_function import CostFunction
 
 class Dataset:
     def __init__(self, pods=4, link_bw=10000.0):
