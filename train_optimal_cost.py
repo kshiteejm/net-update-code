@@ -298,11 +298,11 @@ if __name__ == '__main__':
                        n_epoch")
     seed = sys.argv[1]
     random.seed(seed)
-    train = ("True" == sys.argv[2])
+    is_train = ("True" == sys.argv[2])
     dataset = sys.argv[3]
     dataset_size = int(sys.argv[4])
     model_dir = sys.argv[5]
-    if train:
+    if is_train:
         train(dataset, dataset_size, model_dir)
     else:
         n_epoch = int(sys.argv[6])
