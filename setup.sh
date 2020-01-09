@@ -5,4 +5,4 @@ pip3 install --user torch
 pip3 install --user networkx
 pip3 install --user matplotlib
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
+echo 'export PATH=$HOME/.cargo/bin:$PATH' >> ~/.bashrc
