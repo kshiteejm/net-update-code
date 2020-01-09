@@ -191,7 +191,7 @@ class Dataset:
 
 if __name__ == '__main__':
     if len(sys.argv) < 5:
-        print("python3 fat_tree_network \
+        print("python3 dataset.py \
                        seed \
                        gen_costs_bool \
                        gen_action_seq \

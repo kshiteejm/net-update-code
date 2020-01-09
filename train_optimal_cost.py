@@ -13,20 +13,11 @@ from utils.weight_scale import get_param_scale
 import sys
 
 
-def train(dataset):
+def train(dataset, dataset_size, model_dir):
     pods = 4
-    num_steps = 4
-    max_link_bw = 10000
-    bisection_bw = 160000
 
-    # read dataset
-    is_single = False
-    # dataset = "/data/kshiteej/net-update-data"
-    if is_single: 
-        # dataset = "/data/kshiteej/net-update-data-single"
-        dataset = "./net-update-data-single"
     file_list = os.listdir(dataset)
-    
+
     substring = "nodefeats_fat_tree_%s_pods_" % pods
     nodefeats_file_list = [item for item in file_list if substring in item]
     nodefeats_file_list.sort()
@@ -39,14 +30,15 @@ def train(dataset):
     cost_file_list = [item for item in file_list if substring in item]
     cost_file_list.sort()
 
+    if dataset_size > 0:
+        nodefeats_file_list = nodefeats_file_list[:dataset_size]
+        adjmats_file_list = adjmats_file_list[:dataset_size]
+        cost_file_list = cost_file_list[:dataset_size]
+
     nodefeats_rows = []
     for f in nodefeats_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        # # normalize
-        # row[0][:,1] /= num_steps
-        # row[1] /= max_link_bw
-        # row[3] /= max_link_bw
         nodefeats_rows.append(row)
     print("Finished Reading Node Features...")
 
@@ -61,8 +53,6 @@ def train(dataset):
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        # # normalize
-        # row = row/bisection_bw
         cost_rows.append(row)
     print("Finished Reading Optimal Costs...")
     
@@ -88,9 +78,6 @@ def train(dataset):
     training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
-    if is_single:
-        training_indexes = list(range(0, len(cost_file_list)))
-        validation_indexes = list(range(0, len(cost_file_list)))
 
     print('Setting up monitoring...')
     monitor = SummaryWriter('./results/' +
@@ -100,7 +87,8 @@ def train(dataset):
     proj_done_time = ProjectFinishTime(num_epochs, same_line=False)
     for n_epoch in range(num_epochs):
         if n_epoch%10 == 0: 
-            torch.save(mgcn_value.state_dict(), "model_trained_%s_epoch.pt" % n_epoch)
+            torch.save(mgcn_value.state_dict(), 
+                       "%s/model_trained_%s_epoch.pt" % (model_dir, n_epoch))
         
         random.shuffle(training_indexes)
         opt.zero_grad()
@@ -201,18 +189,9 @@ def train(dataset):
 
         proj_done_time.update_progress(n_epoch, message="validation")
 
-def test(n_epoch): 
+def test(dataset, model_dir, n_epoch): 
     pods = 4
-    num_steps = 4
-    max_link_bw = 10000
-    bisection_bw = 160000
 
-    # read dataset
-    is_single = False
-    dataset = "/data/kshiteej/net-update-data"
-    if is_single: 
-        # dataset = "/data/kshiteej/net-update-data-single"
-        dataset = "./net-update-data-single"
     file_list = os.listdir(dataset)
     
     substring = "nodefeats_fat_tree_%s_pods_" % pods
@@ -231,10 +210,6 @@ def test(n_epoch):
     for f in nodefeats_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        # normalize
-        row[0][:,1] /= num_steps
-        row[1] /= max_link_bw
-        row[3] /= max_link_bw
         nodefeats_rows.append(row)
     print("Finished Reading Node Features...")
 
@@ -249,8 +224,6 @@ def test(n_epoch):
     for f in cost_file_list:
         f = "%s/%s" % (dataset, f)
         row = np.load(f)
-        # normalize
-        row = row/bisection_bw
         cost_rows.append(row)
     print("Finished Reading Optimal Costs...")
     
@@ -266,18 +239,14 @@ def test(n_epoch):
                         n_steps=8, 
                         layer_norm_on=True)
 
-    state_dicts = torch.load("model_trained_%s_epoch.pt" % n_epoch)
+    state_dicts = torch.load("%s/model_trained_%s_epoch.pt" % (model_dir, n_epoch))
     mgcn_value.load_state_dict(state_dicts)
     print("LOADED SUCCESSFULLY.")
 
     num_types = len(nodefeats_rows[0])
-    num_epochs = 10000
     training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
-    if is_single:
-        training_indexes = list(range(0, len(cost_file_list)))
-        validation_indexes = list(range(0, len(cost_file_list)))
 
     batch_node_feats = []
     batch_adj_mats = []
@@ -319,8 +288,22 @@ def test(n_epoch):
 
 
 if __name__ == '__main__':
-    random.seed(42)
-    dataset = sys.argv[1]
-    train(dataset)
-    # n_epoch = int(sys.argv[1])
-    # test(n_epoch)
+    if len(sys.argv) < 6:
+        print("python3 train_optimal_cost.py \
+                       seed \
+                       train_bool \
+                       dataset_loc \
+                       dataset_size \
+                       model_dir \
+                       n_epoch")
+    seed = sys.argv[1]
+    random.seed(seed)
+    train = ("True" == sys.argv[2])
+    dataset = sys.argv[3]
+    dataset_size = int(sys.argv[4])
+    model_dir = sys.argv[5]
+    if train:
+        train(dataset, dataset_size, model_dir)
+    else:
+        n_epoch = int(sys.argv[6])
+        test(dataset, model_dir, n_epoch)
