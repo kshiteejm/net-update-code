@@ -7,5 +7,6 @@ pip3 install --user IPython
 pip3 install --user networkx
 pip3 install --user graphviz
 pip3 install --user matplotlib
+pip3 install --user tensorboard
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 echo 'export PATH=$HOME/.cargo/bin:$PATH' >> ~/.bashrc
