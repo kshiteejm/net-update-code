@@ -189,7 +189,7 @@ def train(dataset, dataset_size, model_dir):
 
         proj_done_time.update_progress(n_epoch, message="validation")
 
-def test(dataset, model_dir, n_epoch): 
+def test(dataset, dataset_size, model_dir, n_epoch): 
     pods = 4
 
     file_list = os.listdir(dataset)
@@ -205,6 +205,11 @@ def test(dataset, model_dir, n_epoch):
     substring = "cost_fat_tree_%s_pods_" % pods
     cost_file_list = [item for item in file_list if substring in item]
     cost_file_list.sort()
+
+    if dataset_size > 0:
+        nodefeats_file_list = nodefeats_file_list[:dataset_size]
+        adjmats_file_list = adjmats_file_list[:dataset_size]
+        cost_file_list = cost_file_list[:dataset_size]
 
     nodefeats_rows = []
     for f in nodefeats_file_list:
@@ -306,4 +311,4 @@ if __name__ == '__main__':
         train(dataset, dataset_size, model_dir)
     else:
         n_epoch = int(sys.argv[6])
-        test(dataset, model_dir, n_epoch)
+        test(dataset, dataset_size, model_dir, n_epoch)
