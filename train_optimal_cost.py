@@ -259,8 +259,9 @@ def test(dataset, dataset_size, model_dir, n_epoch):
     for _ in range(num_types):
         batch_node_feats.append([])
         batch_adj_mats.append([])
-    for i in range(len(validation_indexes)):
-        index = validation_indexes[i]
+    for i in range(len(cost_file_list)):
+        # index = validation_indexes[i]
+        index = i
         for type_i in range(num_types):
             batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
             batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
