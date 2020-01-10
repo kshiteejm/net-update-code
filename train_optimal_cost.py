@@ -270,14 +270,19 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
 
     batch_update_switch_set_strings = []
     batch_num_steps_left = []
-    batch_node_feats = []
-    batch_adj_mats = []
-    batch_cost_target = []
-    for _ in range(num_types):
-        batch_node_feats.append([])
-        batch_adj_mats.append([])
+    batch_cost_target_list = []
+    batch_cost_estimate_list = []
+    batch_l2_loss = []
+    
     for i in range(len(cost_file_list)):
-        # index = validation_indexes[i]
+
+        batch_node_feats = []
+        batch_adj_mats = []
+        batch_cost_target = []
+        for _ in range(num_types):
+            batch_node_feats.append([])
+            batch_adj_mats.append([])
+        
         index = i
         for type_i in range(num_types):
             batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
@@ -294,22 +299,29 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
                 batch_update_switch_set_strings.append(switch_set_string)
 
         batch_cost_target.append(cost_rows[index])
-    
-    node_feats_torch = [torch.FloatTensor(nf) \
-                        for nf in batch_node_feats]
-    adj_mats_torch  = [torch.FloatTensor(adj) \
-                        for adj in batch_adj_mats]
-    cost_target_torch = torch.FloatTensor(batch_cost_target)
+        batch_cost_target_list.append(cost_rows[index][0])
+        
+        node_feats_torch = [torch.FloatTensor(nf) \
+                            for nf in batch_node_feats]
+        adj_mats_torch  = [torch.FloatTensor(adj) \
+                            for adj in batch_adj_mats]
+        cost_target_torch = torch.FloatTensor(batch_cost_target)
 
-    batch_cost_estimate = mgcn_value(
-        node_feats_torch, adj_mats_torch)
+        batch_cost_estimate = mgcn_value(node_feats_torch, adj_mats_torch)
+        batch_cost_estimate_list.append(batch_cost_estimate.detach().numpy()[0])
+
+        # l2 loss
+        l2_loss = torch.nn.MSELoss(reduction='mean')
+        loss = l2_loss(batch_cost_estimate, cost_target_torch)
+        validation_loss = loss.data.item()
+        batch_l2_loss.append(validation_loss)
 
     f_estimate = open("values_model_estimated.csv", 'w')
     f_target = open("values_target.csv", "w")
     batch_cost_estimate_numpy = batch_cost_estimate.detach().numpy()
     for i in range(len(batch_update_switch_set_strings)):
-        cost_target = batch_cost_target[i]
-        cost_estimate = batch_cost_estimate_numpy[i]
+        cost_target = batch_cost_target_list[i]
+        cost_estimate = batch_cost_estimate_list[i]
         num_steps_left = batch_num_steps_left[i]
         update_switch_set_string = batch_update_switch_set_strings[i]
         f_estimate.write("%s,%s,%s\n" % 
@@ -319,11 +331,8 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     f_estimate.close()
     f_target.close()
 
-    # l2 loss
-    l2_loss = torch.nn.MSELoss(reduction='mean')
-    loss = l2_loss(batch_cost_estimate, cost_target_torch)
-    validation_loss = loss.data.item()
-    
+    validation_loss = sum(batch_l2_loss)/len(batch_l2_loss)
+
     print('l2 loss: {}'.format(validation_loss))
 
     import matplotlib
