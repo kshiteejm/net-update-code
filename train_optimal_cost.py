@@ -284,7 +284,7 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
             batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
             if type_i == 0:
                 num_steps_left = \
-                    int(nodefeats_rows[index][type_i][switch_id][1]*max_num_steps)
+                    int(nodefeats_rows[index][type_i][0][1]*max_num_steps)
                 switch_set_string = ""
                 for switch_id in range(num_tor_switches):
                     if int(nodefeats_rows[index][type_i][switch_id][0]) == 1:
@@ -318,7 +318,7 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
                        (cost_target, num_steps_left, update_switch_set_string))
     f_estimate.close()
     f_target.close()
-    
+
     # l2 loss
     l2_loss = torch.nn.MSELoss(reduction='mean')
     loss = l2_loss(batch_cost_estimate, cost_target_torch)
