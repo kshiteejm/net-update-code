@@ -286,6 +286,7 @@ def test(dataset, dataset_size, model_dir, n_epoch):
     import matplotlib
     matplotlib.use('agg')
     import matplotlib.pyplot as plt
+    plt.figure(figsize=(12, 4))
     plt.plot(cost_target_torch.detach().numpy())
     plt.plot(batch_cost_estimate.detach().numpy())
     plt.legend(['target', 'estimate'])
