@@ -191,6 +191,8 @@ def train(seed, dataset, dataset_size, model_dir):
 
 def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_left): 
     pods = 4
+    num_tor_switches = (pods//2) * pods # assuming fat-tree
+    max_num_steps = 4
 
     file_list = os.listdir(dataset)
     
@@ -266,6 +268,8 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
 
+    batch_update_switch_set_strings = []
+    batch_num_steps_left = []
     batch_node_feats = []
     batch_adj_mats = []
     batch_cost_target = []
@@ -278,6 +282,17 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
         for type_i in range(num_types):
             batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
             batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
+            if type_i == 0:
+                num_steps_left = \
+                    int(nodefeats_rows[index][type_i][switch_id][1]*max_num_steps)
+                switch_set_string = ""
+                for switch_id in range(num_tor_switches):
+                    if int(nodefeats_rows[index][type_i][switch_id][0]) == 1:
+                        switch_set_string = switch_set_string + str(switch_id) + ","
+                switch_set_string = switch_set_string[:-1]
+                batch_num_steps_left.append(num_steps_left)
+                batch_update_switch_set_strings.append(switch_set_string)
+
         batch_cost_target.append(cost_rows[index])
     
     node_feats_torch = [torch.FloatTensor(nf) \
@@ -289,6 +304,21 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     batch_cost_estimate = mgcn_value(
         node_feats_torch, adj_mats_torch)
 
+    f_estimate = open("values_model_estimated.csv", 'w')
+    f_target = open("values_target.csv", "w")
+    batch_cost_estimate_numpy = batch_cost_estimate.detach().numpy()
+    for i in range(len(batch_update_switch_set_strings)):
+        cost_target = batch_cost_target[i]
+        cost_estimate = batch_cost_estimate_numpy[i]
+        num_steps_left = batch_num_steps_left[i]
+        update_switch_set_string = batch_update_switch_set_strings[i]
+        f_estimate.write("%s,%s,%s\n" % 
+                         (cost_estimate, num_steps_left, update_switch_set_string))
+        f_target.write("%s,%s,%s\n" % 
+                       (cost_target, num_steps_left, update_switch_set_string))
+    f_estimate.close()
+    f_target.close()
+    
     # l2 loss
     l2_loss = torch.nn.MSELoss(reduction='mean')
     loss = l2_loss(batch_cost_estimate, cost_target_torch)
