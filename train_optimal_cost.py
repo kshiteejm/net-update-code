@@ -13,7 +13,7 @@ from utils.weight_scale import get_param_scale
 import sys
 
 
-def train(dataset, dataset_size, model_dir):
+def train(seed, dataset, dataset_size, model_dir):
     pods = 4
 
     file_list = os.listdir(dataset)
@@ -189,27 +189,40 @@ def train(dataset, dataset_size, model_dir):
 
         proj_done_time.update_progress(n_epoch, message="validation")
 
-def test(dataset, dataset_size, model_dir, n_epoch): 
+def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_left): 
     pods = 4
 
     file_list = os.listdir(dataset)
     
-    substring = "nodefeats_fat_tree_%s_pods_" % pods
-    nodefeats_file_list = [item for item in file_list if substring in item]
-    nodefeats_file_list.sort()
+    if test_steps_left > 0:
+        substring = "nodefeats_fat_tree_%s_pods_%s_%s" % (pods, seed, test_steps_left)
+        nodefeats_file_list = [item for item in file_list if substring in item]
+        nodefeats_file_list.sort()
 
-    substring = "adjmats_fat_tree_%s_pods_" % pods
-    adjmats_file_list = [item for item in file_list if substring in item]
-    adjmats_file_list.sort()
+        substring = "adjmats_fat_tree_%s_pods_%s_%s" % (pods, seed, test_steps_left)
+        adjmats_file_list = [item for item in file_list if substring in item]
+        adjmats_file_list.sort()
 
-    substring = "cost_fat_tree_%s_pods_" % pods
-    cost_file_list = [item for item in file_list if substring in item]
-    cost_file_list.sort()
+        substring = "cost_fat_tree_%s_pods_%s_%s" % (pods, seed, test_steps_left)
+        cost_file_list = [item for item in file_list if substring in item]
+        cost_file_list.sort()
+    else:
+        substring = "nodefeats_fat_tree_%s_pods_%s" % (pods, seed)
+        nodefeats_file_list = [item for item in file_list if substring in item]
+        nodefeats_file_list.sort()
 
-    if dataset_size > 0:
-        nodefeats_file_list = nodefeats_file_list[:dataset_size]
-        adjmats_file_list = adjmats_file_list[:dataset_size]
-        cost_file_list = cost_file_list[:dataset_size]
+        substring = "adjmats_fat_tree_%s_pods_%s" % (pods, seed)
+        adjmats_file_list = [item for item in file_list if substring in item]
+        adjmats_file_list.sort()
+
+        substring = "cost_fat_tree_%s_pods_%s" % (pods, seed)
+        cost_file_list = [item for item in file_list if substring in item]
+        cost_file_list.sort()
+
+    if test_size > 0:
+        nodefeats_file_list = nodefeats_file_list[:test_size]
+        adjmats_file_list = adjmats_file_list[:test_size]
+        cost_file_list = cost_file_list[:test_size]
 
     nodefeats_rows = []
     for f in nodefeats_file_list:
@@ -291,7 +304,7 @@ def test(dataset, dataset_size, model_dir, n_epoch):
     plt.plot(batch_cost_estimate.detach().numpy())
     plt.legend(['target', 'estimate'])
     plt.title('l2 loss: {}'.format(validation_loss))
-    plt.savefig('./epoch_{}.png'.format(n_epoch))
+    plt.savefig('./epoch_{}_{}.png'.format(n_epoch, test_steps_left))
 
 
 if __name__ == '__main__':
@@ -302,7 +315,9 @@ if __name__ == '__main__':
                        dataset_loc \
                        dataset_size \
                        model_dir \
-                       n_epoch")
+                       n_epoch \
+                       test_size \
+                       test_steps_left")
     seed = sys.argv[1]
     random.seed(seed)
     is_train = ("True" == sys.argv[2])
@@ -310,7 +325,13 @@ if __name__ == '__main__':
     dataset_size = int(sys.argv[4])
     model_dir = sys.argv[5]
     if is_train:
-        train(dataset, dataset_size, model_dir)
+        train(seed, dataset, dataset_size, model_dir)
     else:
         n_epoch = int(sys.argv[6])
-        test(dataset, dataset_size, model_dir, n_epoch)
+        test_size = 0
+        test_steps_left = 0
+        if len(sys.argv) >= 8:
+            test_size = int(sys.argv[7])
+        if len(sys.argv) >= 9:
+            test_steps_left = int(sys.argv[8])
+        test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_left)
