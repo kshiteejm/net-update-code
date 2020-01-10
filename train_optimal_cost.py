@@ -299,7 +299,7 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
                 batch_update_switch_set_strings.append(switch_set_string)
 
         batch_cost_target.append(cost_rows[index])
-        batch_cost_target_list.append(cost_rows[index][0][0])
+        batch_cost_target_list.append(cost_rows[index][0])
         
         node_feats_torch = [torch.FloatTensor(nf) \
                             for nf in batch_node_feats]
@@ -308,7 +308,7 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
         cost_target_torch = torch.FloatTensor(batch_cost_target)
 
         batch_cost_estimate = mgcn_value(node_feats_torch, adj_mats_torch)
-        batch_cost_estimate_list.append(batch_cost_estimate.detach().numpy()[0])
+        batch_cost_estimate_list.append(batch_cost_estimate.detach().numpy()[0][0])
 
         # l2 loss
         l2_loss = torch.nn.MSELoss(reduction='mean')
