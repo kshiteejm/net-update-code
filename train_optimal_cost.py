@@ -274,6 +274,8 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     batch_cost_estimate_list = []
     batch_l2_loss = []
     
+    proj_done_time = ProjectFinishTime(len(cost_file_list), same_line=False)
+
     for i in range(len(cost_file_list)):
 
         batch_node_feats = []
@@ -315,6 +317,8 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
         loss = l2_loss(batch_cost_estimate, cost_target_torch)
         validation_loss = loss.data.item()
         batch_l2_loss.append(validation_loss)
+
+        proj_done_time.update_progress(i, "elapsed")
 
     f_estimate = open("values_model_estimated.csv", 'w')
     f_target = open("values_target.csv", "w")
