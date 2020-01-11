@@ -191,7 +191,7 @@ def train(seed, dataset, dataset_size, model_dir):
 
 def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_left): 
     pods = 4
-    num_tor_switches = (pods//2) * pods # assuming fat-tree
+    num_switches = (pods//2) * (pods//2 + 2*pods) # assuming fat-tree
     max_num_steps = 4
 
     file_list = os.listdir(dataset)
@@ -293,7 +293,7 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
                 num_steps_left = \
                     int(nodefeats_rows[index][type_i][0][1]*max_num_steps)
                 switch_set_string = ""
-                for switch_id in range(num_tor_switches):
+                for switch_id in range(num_switches):
                     if int(nodefeats_rows[index][type_i][switch_id][0]) == 1:
                         switch_set_string = switch_set_string + str(switch_id) + ","
                 switch_set_string = switch_set_string[:-1]
