@@ -339,15 +339,19 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
 
     print('l2 loss: {}'.format(validation_loss))
 
+    plot_size = test_size
+    if test_size <= 0:
+        plot_size = 200
+    
     import matplotlib
     matplotlib.use('agg')
     import matplotlib.pyplot as plt
     plt.figure(figsize=(12, 4))
-    plt.plot(batch_cost_target_list)
-    plt.plot(batch_cost_estimate_list)
+    plt.plot(batch_cost_target_list[:plot_size])
+    plt.plot(batch_cost_estimate_list[:plot_size])
     plt.legend(['target', 'estimate'])
     plt.title('l2 loss: {}'.format(validation_loss))
-    plt.savefig('./epoch_{}_{}.png'.format(n_epoch, test_steps_left))
+    plt.savefig('./epoch_{}_{}_{}.png'.format(n_epoch, test_steps_left, seed))
 
 
 if __name__ == '__main__':
