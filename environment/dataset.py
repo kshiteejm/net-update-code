@@ -8,6 +8,8 @@ from fat_tree_network import FatTreeNetwork
 from traffic_distribution import TrafficDistribution
 from waterfilling import MaxMinFairBW
 from cost_function import CostFunction
+sys.path.append(os.path.abspath('../'))
+from proj_time import ProjectFinishTime
 
 class Dataset:
     def __init__(self, pods=4, link_bw=10000.0):
@@ -16,7 +18,9 @@ class Dataset:
         
         # init traffic matrix between tor pairs
         self.traffic_distribution = TrafficDistribution(self.network.num_tor_switches)
-        self.traffic_matrix = self.traffic_distribution.uniform(mean_min=1875, mean_max=1875, 
+        # self.traffic_matrix = self.traffic_distribution.uniform(mean_min=1875, mean_max=1875, 
+        #                                                    spread=625)
+        self.traffic_matrix = self.traffic_distribution.uniform(mean_min=2375, mean_max=2375, 
                                                            spread=625)
         print(np.sum(self.traffic_matrix))
 
@@ -72,6 +76,7 @@ class Dataset:
                                 update_switch_set_left))
         f.close()
 
+        proj_done_time = ProjectFinishTime(len(gcn_dataset), same_line=False)
         datum_id = 1
         for gcn_datum in gcn_dataset:
             num_steps = gcn_datum[0]
@@ -187,6 +192,7 @@ class Dataset:
             np.save("%s_%s_%s" % (save_cost_file, int(num_steps), datum_id),
                 [total_cost])
             
+            proj_done_time.update_progress(datum_id, message="elapsed")
             datum_id = datum_id + 1
 
 if __name__ == '__main__':
