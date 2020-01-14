@@ -3,11 +3,11 @@ import numpy as np
 import os, sys
 import networkx as nx
 
-from helpers import powerset, get_baseline_bw_matrix
-from fat_tree_network import FatTreeNetwork
-from traffic_distribution import TrafficDistribution
-from waterfilling import MaxMinFairBW
-from cost_function import CostFunction
+from environment.helpers import powerset, get_baseline_bw_matrix
+from environment.fat_tree_network import FatTreeNetwork
+from environment.traffic_distribution import TrafficDistribution
+from environment.waterfilling import MaxMinFairBW
+from environment.cost_function import CostFunction
 import scipy.sparse
 sys.path.append(os.path.abspath('../'))
 from proj_time import ProjectFinishTime
@@ -37,10 +37,10 @@ class DCNEnvironment:
                                           baseline_bw_matrix, self.network.bisection_bw)
 
     def get_update_switch_set(self):
-        self.network.update_switch_set
+        return self.network.update_switch_set
     
     def get_max_num_steps(self):
-        self.max_num_steps
+        return self.max_num_steps
     
     # generate all possible one-step update costs
     def get_cost_model(self):
@@ -80,7 +80,10 @@ class DCNEnvironment:
             if node in intermediate_switches:
                 intermediate = 1.0
             q_graph.add_node(node_id, type='s', id=node, 
-                                raw_feats=[intermediate,to_update,num_steps/max_num_steps])
+                                raw_feats=[
+                                intermediate,
+                                to_update,
+                                num_steps/self.max_num_steps])
             s.append(node_id)
             node_id = node_id + 1
         

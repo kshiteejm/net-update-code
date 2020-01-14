@@ -1,5 +1,5 @@
 import numpy as np
-from dcn_environment import DCNEnvironment
+from environment.dcn_environment import DCNEnvironment
 
 
 class RLEnv(object):
@@ -33,12 +33,12 @@ class RLEnv(object):
         # update a new environment
         # potentially new topology, new set of
         # switches to update, new traffic matrix
-        self.dcn_environment = DCNEnvironment(pods=4, link_bw=10000.0, num_steps=4)
+        self.dcn_environment = DCNEnvironment(pods=4, link_bw=10000.0, max_num_steps=4)
         self.num_steps = self.dcn_environment.get_max_num_steps()
         self.switches_to_update = self.dcn_environment.get_update_switch_set()
         self.intermediate_switches = set()
         # tuple(sorted(down_switch_idx_set)) -> cost
-        self.cost_model = self.dcn_environment.get_cost_model
+        self.cost_model = self.dcn_environment.get_cost_model()
 
     def get_reward(self, down_switch_set):
         # cost model table look up
