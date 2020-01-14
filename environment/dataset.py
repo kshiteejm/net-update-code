@@ -13,7 +13,9 @@ sys.path.append(os.path.abspath('../'))
 from proj_time import ProjectFinishTime
 
 class Dataset:
-    def __init__(self, pods=4, link_bw=10000.0):
+    def __init__(self, pods=4, link_bw=10000.0, max_num_steps=4):
+        self.max_num_steps = 4
+
         # init network and update switch set
         self.network = FatTreeNetwork(pods=pods, link_bw=link_bw)
         
@@ -56,8 +58,9 @@ class Dataset:
 
     # generate training dataset for training the gcn
     def generate_gcn_dataset(self, optimal_cost_action_file, 
-                             save_nodefeats_file, save_adjmats_file, save_cost_file, 
-                             max_num_steps):
+                             save_nodefeats_file, save_adjmats_file, save_cost_file):
+        max_num_steps = self.max_num_steps
+
         # generate a quad-graph - with 4 types of nodes
         # Traffic Class (TC) <-> Paths (P) <-> Links(L) <-> Switches (S)
         # TC raw feat = {traffic demand}
@@ -224,7 +227,7 @@ if __name__ == '__main__':
     total_cost = 0.0
 
     random.seed(seed)
-    dataset_generator = Dataset(pods=pods)
+    dataset_generator = Dataset(pods=pods, max_num_steps=4)
 
     if generate_cost_file:
         dataset_generator.generate_costs("%s/costs_fat_tree_%s_pods_%s.csv" 
@@ -255,4 +258,4 @@ if __name__ == '__main__':
     save_adjmats_file =  "%s/adjmats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_cost_file = "%s/cost_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     dataset_generator.generate_gcn_dataset(optimal_cost_action_file, save_nodefeats_file, 
-                                 save_adjmats_file, save_cost_file, max_num_steps)
+                                 save_adjmats_file, save_cost_file)

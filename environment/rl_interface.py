@@ -1,4 +1,5 @@
 import numpy as np
+from dcn_environment import DCNEnvironment
 
 
 class RLEnv(object):
@@ -8,12 +9,12 @@ class RLEnv(object):
     def step(self, switch_idx):
         # None stands for current step done
         if switch_idx is None:
-            reward = self.get_reward(self.intermediate_swiches)
-            self.switches_to_update -= self.intermediate_swiches
+            reward = self.get_reward(self.intermediate_switches)
+            self.switches_to_update -= self.intermediate_switches
             self.num_steps -= 1
         else:
-            assert not switch_idx in self.intermediate_swiches
-            self.intermediate_swiches.add(switch_idx)
+            assert not switch_idx in self.intermediate_switches
+            self.intermediate_switches.add(switch_idx)
             reward = 0
 
         state = self.get_state()
@@ -32,11 +33,12 @@ class RLEnv(object):
         # update a new environment
         # potentially new topology, new set of
         # switches to update, new traffic matrix
-        self.num_steps = 4
-        self.switches_to_update = set()
-        self.intermediate_swiches = set()
+        self.dcn_environment = DCNEnvironment(pods=4, link_bw=10000.0, num_steps=4)
+        self.num_steps = self.dcn_environment.get_max_num_steps()
+        self.switches_to_update = self.dcn_environment.get_update_switch_set()
+        self.intermediate_switches = set()
         # tuple(sorted(down_switch_idx_set)) -> cost
-        self.cost_model = {}
+        self.cost_model = self.dcn_environment.get_cost_model
 
     def get_reward(self, down_switch_set):
         # cost model table look up
@@ -47,4 +49,6 @@ class RLEnv(object):
         # intermediate switches (within one mdp step), 
         # traffic matrix, steps left as input,
         # output a graph of state
-        pass
+        return self.dcn_environment.get_state(self.switches_to_update, 
+                                              self.intermediate_switches,
+                                              self.num_steps)
