@@ -8,6 +8,7 @@ from fat_tree_network import FatTreeNetwork
 from traffic_distribution import TrafficDistribution
 from waterfilling import MaxMinFairBW
 from cost_function import CostFunction
+import scipy.sparse
 sys.path.append(os.path.abspath('../'))
 from proj_time import ProjectFinishTime
 
@@ -173,26 +174,30 @@ class Dataset:
                 tc_node_features[node_id][0] = q_graph.nodes[node_id]['raw_feats'][0]
                 tc_node_features[node_id][1] = q_graph.nodes[node_id]['raw_feats'][1]
 
-            s_adj_matrix = nx.adjacency_matrix(q_graph).todense()
-            l_adj_matrix = nx.adjacency_matrix(q_graph).todense()
-            p_adj_matrix = nx.adjacency_matrix(q_graph).todense()
-            tc_adj_matrix = nx.adjacency_matrix(q_graph).todense()        
+            adj_matrices = {}
+            adj_matrices['s'] = nx.adjacency_matrix(q_graph) 
+            adj_matrices['l'] = nx.adjacency_matrix(q_graph)
+            adj_matrices['p'] = nx.adjacency_matrix(q_graph)
+            adj_matrices['tc'] = nx.adjacency_matrix(q_graph) 
             all_nodes = set(q_graph.nodes)
             for i in all_nodes.difference(set(s)):
-                s_adj_matrix[i] = 0
+                adj_matrices['s'][i] = 0
             for i in all_nodes.difference(set(l)):
-                l_adj_matrix[i] = 0
+                adj_matrices['l'][i] = 0
             for i in all_nodes.difference(set(p)):
-                p_adj_matrix[i] = 0
+                adj_matrices['p'][i] = 0
             for i in all_nodes.difference(set(tc)):
-                tc_adj_matrix[i] = 0
+                adj_matrices['tc'][i] = 0
 
             np.save("%s_%s_%s" % (save_nodefeats_file, int(num_steps), datum_id), 
-                [s_node_features, l_node_features, p_node_features, tc_node_features])
-            np.save("%s_%s_%s" % (save_adjmats_file, int(num_steps), datum_id), 
-                [s_adj_matrix, l_adj_matrix, p_adj_matrix, tc_adj_matrix])
+                    [s_node_features, l_node_features, p_node_features, tc_node_features])
+            for node_type in ['s', 'l', 'p', 'tc']:
+                scipy.sparse.save_npz("%s_%s_%s_%s" % 
+                                      (save_adjmats_file, node_type, 
+                                       int(num_steps), datum_id), 
+                                      adj_matrices[node_type])
             np.save("%s_%s_%s" % (save_cost_file, int(num_steps), datum_id),
-                [total_cost])
+                    [total_cost])
             
             proj_done_time.update_progress(datum_id, message="elapsed")
             datum_id = datum_id + 1

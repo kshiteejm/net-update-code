@@ -4,6 +4,7 @@ from proj_time import ProjectFinishTime
 import torch
 import torch.nn as nn
 import numpy as np
+import scipy.sparse
 from gcn.mgcn_value import MGCN_Value
 from gcn.batch_mgcn_value import Batch_MGCN_Value
 from gcn.layers import FullyConnectNN
@@ -22,9 +23,14 @@ def train(seed, dataset, dataset_size, model_dir):
     nodefeats_file_list = [item for item in file_list if substring in item]
     nodefeats_file_list.sort()
 
-    substring = "adjmats_fat_tree_%s_pods_" % pods
-    adjmats_file_list = [item for item in file_list if substring in item]
-    adjmats_file_list.sort()
+    # adjmats_file_list = [item for item in file_list if substring in item]
+    # adjmats_file_list.sort()
+    adjmats_file_lists = {}
+    for node_type in ['s', 'l', 'p', 'tc']:
+        substring = "adjmats_fat_tree_%s_pods_%s" % (pods, node_type)
+        adjmats_file_list = [item for item in file_list if substring in item]
+        adjmats_file_list.sort()
+        adjmats_file_lists[node_type] = adjmats_file_list
 
     substring = "cost_fat_tree_%s_pods_" % pods
     cost_file_list = [item for item in file_list if substring in item]
@@ -32,7 +38,9 @@ def train(seed, dataset, dataset_size, model_dir):
 
     if dataset_size > 0:
         nodefeats_file_list = nodefeats_file_list[:dataset_size]
-        adjmats_file_list = adjmats_file_list[:dataset_size]
+        # adjmats_file_list = adjmats_file_list[:dataset_size]
+        for node_type in ['s', 'l', 'p', 'tc']:
+            adjmats_file_lists[node_type] = adjmats_file_lists[node_type][:dataset_size]
         cost_file_list = cost_file_list[:dataset_size]
 
     nodefeats_rows = []
@@ -42,10 +50,16 @@ def train(seed, dataset, dataset_size, model_dir):
         nodefeats_rows.append(row)
     print("Finished Reading Node Features...")
 
+    # for f in adjmats_file_list:
+    #     f = "%s/%s" % (dataset, f)
+    #     row = np.load(f)
+    #     adjmats_rows.append(row)
     adjmats_rows = []
-    for f in adjmats_file_list:
-        f = "%s/%s" % (dataset, f)
-        row = np.load(f)
+    for idx in range(len(adjmats_file_lists['s'])):
+        row = []
+        for node_type in ['s', 'l', 'p', 'tc']:
+            sparse_adj_mat = scipy.sparse.load_npz(adjmats_file_lists[node_type][idx])
+            row.append(sparse_adj_mat.todense())
         adjmats_rows.append(row)
     print("Finished Reading Adjacency Matrices...")
 
