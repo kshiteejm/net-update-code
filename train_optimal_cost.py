@@ -75,7 +75,8 @@ def train(seed, dataset, dataset_size, model_dir):
 
     num_types = len(nodefeats_rows[0])
     num_epochs = 401
-    training_index_limit = int(len(cost_file_list) * 0.8 / 32) * 32
+    batch_size = 32
+    training_index_limit = int(len(cost_file_list) * 0.8 // batch_size) * batch_size
     training_indexes = list(range(0, training_index_limit))
     validation_indexes = list(range(training_index_limit, len(cost_file_list)))
 
@@ -90,104 +91,110 @@ def train(seed, dataset, dataset_size, model_dir):
             torch.save(mgcn_value.state_dict(), 
                        "%s/model_trained_%s_epoch.pt" % (model_dir, n_epoch))
         
+        # TRAINING
         random.shuffle(training_indexes)
         opt.zero_grad()
         batch_loss = 0.0
         validation_loss = 0.0
 
-        for i in range(len(training_indexes)):
-            if i%32 == 0 or i == (len(training_indexes) - 1):
-                if i == (len(training_indexes) - 1): 
-                    index = training_indexes[i]
-                    for type_i in range(num_types):
-                        batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
-                        batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
-                    batch_cost_target.append(cost_rows[index])
-                
-                if i > 0:
-                    node_feats_torch = [torch.FloatTensor(nf) \
-                                        for nf in batch_node_feats]
-                    adj_mats_torch = [torch.FloatTensor(adj) \
-                                      for adj in batch_adj_mats]
-                    cost_target_torch = torch.FloatTensor(batch_cost_target)
-                    batch_cost_estimate = mgcn_value(
-                        node_feats_torch, adj_mats_torch)
-
-                    # l2 loss
-                    loss = l2_loss(batch_cost_estimate, cost_target_torch)
-
-                    batch_loss = loss.data.item()
-                    monitor.add_scalar('Loss/train_loss', batch_loss, n_iter)
-                    
-                    accuracy = ((batch_cost_estimate - cost_target_torch) \
-                               / (cost_target_torch + 1e-6)).mean()
-                    monitor.add_scalar('Loss/train_accuracy', accuracy.item(), n_iter)
-
-                    maxima = max(abs(batch_cost_estimate - cost_target_torch))
-                    monitor.add_scalar('Loss/train_max_diff', maxima.item(), n_iter)
-
-                    # backward
-                    opt.zero_grad()
-                    loss.backward()
-                    opt.step()
-                
-                batch_node_feats = []
-                batch_adj_mats = []
-                batch_cost_target = []
-                for _ in range(num_types):
-                    batch_node_feats.append([])
-                    batch_adj_mats.append([])
+        batch_loops = len(training_indexes) // batch_size
+        for batch_num in range(batch_loops):
+            start_index = batch_num * batch_size
+            end_index = (batch_num + 1) * batch_size
+            if end_index > len(training_indexes):
+                end_index = len(training_indexes)
             
-            index = training_indexes[i]
-            for type_i in range(num_types):
-                batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
-                batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
-            batch_cost_target.append(cost_rows[index])
+            batch_node_feats = []
+            batch_adj_mats = []
+            batch_cost_target = []
+            for _ in range(num_types):
+                batch_node_feats.append([])
+                batch_adj_mats.append([])
             
-            n_iter = n_iter + 1
-        
-        proj_done_time.update_progress(n_epoch, message="single epoch training")
+            for index_index in range(start_index, end_index):
+                index = training_indexes[index_index]
+                for type_i in range(num_types):
+                    batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
+                    batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
+                batch_cost_target.append(cost_rows[index])
+            
+            node_feats_torch = [torch.FloatTensor(nf) \
+                                for nf in batch_node_feats]
+            adj_mats_torch = [torch.FloatTensor(adj) \
+                              for adj in batch_adj_mats]
+            cost_target_torch = torch.FloatTensor(batch_cost_target)
+            
+            batch_cost_estimate = mgcn_value(node_feats_torch, adj_mats_torch)
 
-        batch_node_feats = []
-        batch_adj_mats = []
-        batch_cost_target = []
-        for _ in range(num_types):
-            batch_node_feats.append([])
-            batch_adj_mats.append([])
-        for i in range(len(validation_indexes)):
-            index = validation_indexes[i]
-            for type_i in range(num_types):
-                batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
-                batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
-            batch_cost_target.append(cost_rows[index])
-        
-        node_feats_torch = [torch.FloatTensor(nf) \
-                            for nf in batch_node_feats]
-        adj_mats_torch  = [torch.FloatTensor(adj) \
-                           for adj in batch_adj_mats]
-        cost_target_torch = torch.FloatTensor(batch_cost_target)
+            # l2 loss
+            loss = l2_loss(batch_cost_estimate, cost_target_torch)
 
-        batch_cost_estimate = mgcn_value(
-            node_feats_torch, adj_mats_torch)
+            batch_loss = loss.data.item()
+            monitor.add_scalar('Loss/train_loss', batch_loss, end_index)
+            
+            accuracy = ((batch_cost_estimate - cost_target_torch) \
+                        / (cost_target_torch + 1e-6)).mean()
+            monitor.add_scalar('Loss/train_accuracy', accuracy.item(), end_index)
 
-        # l2 loss
-        loss = l2_loss(batch_cost_estimate, cost_target_torch)
-        validation_loss = loss.data.item()
+            max_diff = max(abs(batch_cost_estimate - cost_target_torch))
+            monitor.add_scalar('Loss/train_max_diff', max_diff.item(), end_index)
 
+            # backward
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+
+        # VALIDATION
+        validation_loss = 0.0
+        max_diff = 0.0
+
+        batch_loops = len(validation_indexes) // batch_size
+        for batch_num in range(batch_loops):
+            start_index = batch_num * batch_size
+            end_index = (batch_num + 1) * batch_size
+            if end_index > len(validation_indexes):
+                end_index = len(validation_indexes)
+            
+            batch_node_feats = []
+            batch_adj_mats = []
+            batch_cost_target = []
+            for _ in range(num_types):
+                batch_node_feats.append([])
+                batch_adj_mats.append([])
+
+            for index_index in range(start_index, end_index):
+                index = validation_indexes[index_index]
+                for type_i in range(num_types):
+                    batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
+                    batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
+                batch_cost_target.append(cost_rows[index])
+
+            node_feats_torch = [torch.FloatTensor(nf) \
+                                for nf in batch_node_feats]
+            adj_mats_torch  = [torch.FloatTensor(adj) \
+                            for adj in batch_adj_mats]
+            cost_target_torch = torch.FloatTensor(batch_cost_target)
+
+            batch_cost_estimate = mgcn_value(node_feats_torch, adj_mats_torch)
+
+            maxima = max(abs(batch_cost_estimate - cost_target_torch))
+            if maxima > max_diff:
+                max_diff = maxima
+
+            # l2 loss
+            loss = l2_loss(batch_cost_estimate, cost_target_torch)
+            validation_loss = validation_loss + loss.data.item() * (end_index - start_index)
+ 
         param_mean, param_max = get_param_scale(mgcn_value)
         monitor.add_scalar('Parameters/parameter_mean', param_mean, n_epoch)
         monitor.add_scalar('Parameters/parameter_max', param_max, n_epoch)
 
+        validation_loss = validation_loss/len(validation_indexes)
         monitor.add_scalar('Loss/validation_loss', validation_loss, n_epoch)
 
-        accuracy = ((batch_cost_estimate - cost_target_torch) \
-                   / (cost_target_torch + 1e-6)).mean()
-        monitor.add_scalar('Loss/validation_accuracy', accuracy.item(), n_epoch)
+        monitor.add_scalar('Loss/validation_max_diff', max_diff, n_epoch)
 
-        maxima = max(abs(batch_cost_estimate - cost_target_torch))
-        monitor.add_scalar('Loss/validation_max_diff', maxima.item(), n_epoch)
-
-        proj_done_time.update_progress(n_epoch, message="validation")
+        proj_done_time.update_progress(n_epoch, message="elapsed")
 
 def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_left): 
     pods = 4
@@ -274,9 +281,11 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     batch_cost_estimate_list = []
     batch_l2_loss = []
     
-    proj_done_time = ProjectFinishTime(len(cost_file_list), same_line=False)
+    batch_size = 32
+    batch_loops = len(cost_file_list)//batch_size
+    proj_done_time = ProjectFinishTime(len(batch_loops), same_line=False)
 
-    for i in range(len(cost_file_list)):
+    for batch_num in range(batch_loops):
 
         batch_node_feats = []
         batch_adj_mats = []
@@ -284,25 +293,30 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
         for _ in range(num_types):
             batch_node_feats.append([])
             batch_adj_mats.append([])
-        
-        index = i
-        for type_i in range(num_types):
-            batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
-            batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
-            if type_i == 0:
-                num_steps_left = \
-                    int(nodefeats_rows[index][type_i][0][1]*max_num_steps)
-                switch_set_string = ""
-                for switch_id in range(num_switches):
-                    if int(nodefeats_rows[index][type_i][switch_id][0]) == 1:
-                        switch_set_string = switch_set_string + str(switch_id) + ","
-                switch_set_string = switch_set_string[:-1]
-                batch_num_steps_left.append(num_steps_left)
-                batch_update_switch_set_strings.append(switch_set_string)
 
-        batch_cost_target.append(cost_rows[index])
-        batch_cost_target_list.append(cost_rows[index][0])
+        start_index = batch_num * batch_size
+        end_index = (batch_num + 1) * batch_size
+        if end_index > len(cost_file_list):
+            end_index = len(cost_file_list)
         
+        for index in range(start_index, end_index):
+            for type_i in range(num_types):
+                batch_node_feats[type_i].append(nodefeats_rows[index][type_i])
+                batch_adj_mats[type_i].append(adjmats_rows[index][type_i])
+                if type_i == 0:
+                    num_steps_left = \
+                        int(nodefeats_rows[index][type_i][0][1]*max_num_steps)
+                    switch_set_string = ""
+                    for switch_id in range(num_switches):
+                        if int(nodefeats_rows[index][type_i][switch_id][0]) == 1:
+                            switch_set_string = switch_set_string + str(switch_id) + ","
+                    switch_set_string = switch_set_string[:-1]
+                    batch_num_steps_left.append(num_steps_left)
+                    batch_update_switch_set_strings.append(switch_set_string)
+
+            batch_cost_target.append(cost_rows[index])
+            batch_cost_target_list.append(cost_rows[index][0])
+            
         node_feats_torch = [torch.FloatTensor(nf) \
                             for nf in batch_node_feats]
         adj_mats_torch  = [torch.FloatTensor(adj) \
@@ -310,19 +324,20 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
         cost_target_torch = torch.FloatTensor(batch_cost_target)
 
         batch_cost_estimate = mgcn_value(node_feats_torch, adj_mats_torch)
-        batch_cost_estimate_list.append(batch_cost_estimate.detach().numpy()[0][0])
+
+        for cost_estimate in batch_cost_estimate.detach().numpy():
+            batch_cost_estimate_list.append(cost_estimate[0])
 
         # l2 loss
         l2_loss = torch.nn.MSELoss(reduction='mean')
         loss = l2_loss(batch_cost_estimate, cost_target_torch)
         validation_loss = loss.data.item()
-        batch_l2_loss.append(validation_loss)
+        batch_l2_loss.append(validation_loss * (end_index - start_index))
 
-        proj_done_time.update_progress(i, "elapsed")
+        proj_done_time.update_progress(batch_num, "elapsed")
 
-    f_estimate = open("values_model_estimated.csv", 'w')
-    f_target = open("values_target.csv", "w")
-    batch_cost_estimate_numpy = batch_cost_estimate.detach().numpy()
+    f_estimate = open("values_model_estimated_%s.csv" % (seed), 'w')
+    f_target = open("values_target_%s.csv" % (seed), "w")
     for i in range(len(batch_update_switch_set_strings)):
         cost_target = batch_cost_target_list[i]
         cost_estimate = batch_cost_estimate_list[i]
@@ -335,10 +350,11 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     f_estimate.close()
     f_target.close()
 
-    validation_loss = sum(batch_l2_loss)/len(batch_l2_loss)
+    validation_loss = sum(batch_l2_loss)/len(cost_file_list)
 
     print('l2 loss: {}'.format(validation_loss))
 
+    # limit the number of points in graph for readability of graph
     plot_size = test_size
     if test_size <= 0:
         plot_size = 200
