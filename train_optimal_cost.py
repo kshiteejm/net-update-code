@@ -283,7 +283,7 @@ def test(seed, dataset, dataset_size, model_dir, n_epoch, test_size, test_steps_
     
     batch_size = 32
     batch_loops = len(cost_file_list)//batch_size
-    proj_done_time = ProjectFinishTime(len(batch_loops), same_line=False)
+    proj_done_time = ProjectFinishTime(batch_loops, same_line=False)
 
     for batch_num in range(batch_loops):
 
