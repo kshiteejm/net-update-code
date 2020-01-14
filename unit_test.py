@@ -5,6 +5,7 @@ from gcn.unit_test.test_gcn import TestGraphConvolution
 from gcn.unit_test.test_read_graph import TestReadGraph
 from gcn.unit_test.test_batch_msg import TestBatchMessagePassing
 from gcn.unit_test.test_batch_graph import TestBatchGraph
+from gcn.unit_test.test_batch_policy import TestBatchPolicy
 from gcn.unit_test.test_param import TestParams
 
 
