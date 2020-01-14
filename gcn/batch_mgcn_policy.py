@@ -9,7 +9,7 @@ from gcn.layers import FullyConnectNN
 class Batch_MGCN_Policy(nn.Module):
     def __init__(self, n_switches, n_feats, n_output, n_hids, h_size, n_steps,
                  act=nn.LeakyReLU, layer_norm_on=False):
-        super(Batch_MGCN_Value, self).__init__()
+        super(Batch_MGCN_Policy, self).__init__()
 
         self.n_switches = n_switches
         self.n_output = n_output
