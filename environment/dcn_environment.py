@@ -161,10 +161,10 @@ class DCNEnvironment:
                     q_graph.nodes[node_id]['raw_feats'][feat_id]
 
         adj_matrices = {}
-        adj_matrices['s'] = nx.adjacency_matrix(q_graph).todense()
-        adj_matrices['l'] = nx.adjacency_matrix(q_graph).todense()
-        adj_matrices['p'] = nx.adjacency_matrix(q_graph).todense()
-        adj_matrices['tc'] = nx.adjacency_matrix(q_graph).todense()
+        adj_matrices['s'] = nx.adjacency_matrix(q_graph).toarray()
+        adj_matrices['l'] = nx.adjacency_matrix(q_graph).toarray()
+        adj_matrices['p'] = nx.adjacency_matrix(q_graph).toarray()
+        adj_matrices['tc'] = nx.adjacency_matrix(q_graph).toarray()
         all_nodes = set(q_graph.nodes)
         for i in all_nodes.difference(set(s)):
             adj_matrices['s'][i] = 0
