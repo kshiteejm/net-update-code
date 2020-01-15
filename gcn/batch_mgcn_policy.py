@@ -63,7 +63,7 @@ class Batch_MGCN_Policy(nn.Module):
         agg_switch_out = torch.sum(switch_out, dim=1)
 
         # map to single priority value for the terminal action
-        term_priority = self.g_gcn_out(agg_switch_out)
+        term_priority = self.agg_priority_transform(agg_switch_out)
 
         # reshape to 2D (batch_size, 1)
         term_priority = torch.reshape(term_priority,
@@ -74,6 +74,22 @@ class Batch_MGCN_Policy(nn.Module):
             switch_priority, term_priority], dim=1)
 
         # output log pi (softmax and smaple from outside)
+        # note: log_pi is un-masked. logpi is supposed to be
+        # only used in policy gradient computation, where the
+        # invalid (mask = 0) entries should never be sampled
+        # TODO: check this is true at policy gradient step
         log_pi = F.log_softmax(priority_values, dim=-1)
 
-        return log_pi
+        # get probability distributions
+        pi = torch.exp(log_pi)
+
+        # zero out the entries based on masks
+        pi *= mask
+
+        # re-normalization
+        # TODO: this step might sum over a bunch of near 0 entries
+        # need to make sure they don't mess things up (especially
+        # deep into the final training stages)
+        pi = F.normalize(pi, p=1, dim=1)
+
+        return log_pi, pi

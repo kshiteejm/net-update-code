@@ -25,8 +25,14 @@ class TestBatchPolicy(unittest.TestCase):
             for nf in self.batch_node_features]
         self.adj_mats_torch = [torch.FloatTensor(adj) \
             for adj in self.batch_adj_mats]
+        mask_done = False
+        while not mask_done:
+            # each row should have at least one mask-in value
+            mask = np.random.randint(2, size=(32, 21))
+            mask_done = all(np.sum(mask, axis=1))
+        self.switch_mask = torch.FloatTensor(mask)
 
-        self.mgcn_value = Batch_MGCN_Policy(
+        self.mgcn_policy = Batch_MGCN_Policy(
             n_switches=20,
             n_feats=[2, 2, 2, 2],
             n_output=8,
@@ -37,5 +43,15 @@ class TestBatchPolicy(unittest.TestCase):
         self.l2_loss = torch.nn.MSELoss(reduction='mean')
 
 
-    def test(self):
+    def test_policy_feedforwarding(self):
+        switch_log_pi, switch_pi = self.mgcn_policy(
+            self.node_feats_torch, self.adj_mats_torch, self.switch_mask)
+        assert(switch_log_pi.shape[0] == 32)  # batch_size
+        assert(switch_log_pi.shape[1] == 21)  # num_switches + 1
+
+        # probability sum to 1
+        assert(torch.all(torch.abs(torch.sum(
+            switch_pi, dim=1) - 1) < 1e-6).item())
+
+    def test_policy_gradient(self):
         pass
