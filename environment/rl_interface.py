@@ -7,11 +7,11 @@ class RLEnv(object):
         self.reset()
 
     def step(self, switch_idx):
-        assert(switch_idx is None or \
+        assert(switch_idx == self.num_switches or \
                switch_idx in self.switches_to_update - self.intermediate_switches)
 
         # None stands for current step done
-        if switch_idx is None:
+        if switch_idx == self.num_switches:
             reward = self.get_reward(self.intermediate_switches)
             self.switches_to_update -= self.intermediate_switches
             self.num_steps -= 1
@@ -41,6 +41,7 @@ class RLEnv(object):
         self.num_steps = self.dcn_environment.get_max_num_steps()
         self.switches_to_update = self.dcn_environment.get_update_switch_set()
         self.intermediate_switches = set()
+        self.num_switches = self.dcn_environment.get_total_switches()
         # tuple(sorted(down_switch_idx_set)) -> cost
         # self.cost_model = self.dcn_environment.get_cost_model()
         state = self.get_state()
@@ -61,7 +62,7 @@ class RLEnv(object):
         # traffic matrix, steps left as input,
         # output a graph of state
         switch_mask = np.zeros(self.dcn_environment.get_total_switches() + 1)
-        switch_mask[:-1] = 1
+        switch_mask[-1] = 1
         for switch_id in (self.switches_to_update - self.intermediate_switches):
             switch_mask[switch_id] = 1.0
         node_feats, adj_mats = self.dcn_environment.get_state(
