@@ -59,7 +59,8 @@ class RLEnv(object):
         # intermediate switches (within one mdp step), 
         # traffic matrix, steps left as input,
         # output a graph of state
-        switch_mask = np.zeros(self.dcn_environment.get_total_switches())
+        switch_mask = np.zeros(self.dcn_environment.get_total_switches() + 1)
+        switch_mask[:-1] = 1
         for switch_id in (self.switches_to_update - self.intermediate_switches):
             switch_mask[switch_id] = 1.0
         node_feats, adj_mats = self.dcn_environment.get_state(
