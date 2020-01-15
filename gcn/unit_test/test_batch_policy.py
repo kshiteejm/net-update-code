@@ -82,6 +82,3 @@ class TestBatchPolicy(unittest.TestCase):
         opt.zero_grad()
         loss.backward()
         opt.step()
-
-    def test_policy_gradient(self):
-        pass
