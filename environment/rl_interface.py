@@ -8,13 +8,14 @@ class RLEnv(object):
 
     def step(self, switch_idx):
         assert(switch_idx is None or \
-               switch_idx in self.switches_to_update)
+               switch_idx in self.switches_to_update - self.intermediate_switches)
 
         # None stands for current step done
         if switch_idx is None:
             reward = self.get_reward(self.intermediate_switches)
             self.switches_to_update -= self.intermediate_switches
             self.num_steps -= 1
+            self.intermediate_switches = set()
         else:
             assert not switch_idx in self.intermediate_switches
             self.intermediate_switches.add(switch_idx)
