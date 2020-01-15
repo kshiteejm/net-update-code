@@ -62,7 +62,6 @@ class RLEnv(object):
         switch_mask = np.zeros(self.dcn_environment.get_total_switches())
         for switch_id in (self.switches_to_update - self.intermediate_switches):
             switch_mask[switch_id] = 1.0
-        return self.dcn_environment.get_state(self.switches_to_update, 
-                                              self.intermediate_switches,
-                                              self.num_steps),\
-               switch_mask
+        node_feats, adj_mats = self.dcn_environment.get_state(
+            self.switches_to_update, self.intermediate_switches, self.num_steps)
+        return node_feats, adj_mats, switch_mask
