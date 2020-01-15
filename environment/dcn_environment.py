@@ -39,6 +39,9 @@ class DCNEnvironment:
     
     def get_max_num_steps(self):
         return self.max_num_steps
+
+    def get_total_switches(self):
+        return self.network.num_switches
     
     # generate all possible one-step update costs
     def get_cost_model(self):
