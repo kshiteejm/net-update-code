@@ -7,6 +7,9 @@ class RLEnv(object):
         self.reset()
 
     def step(self, switch_idx):
+        assert(switch_idx is None or \
+               switch_idx in self.switches_to_update)
+
         # None stands for current step done
         if switch_idx is None:
             reward = self.get_reward(self.intermediate_switches)
