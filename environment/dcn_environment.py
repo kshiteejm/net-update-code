@@ -13,7 +13,8 @@ sys.path.append(os.path.abspath('../'))
 from proj_time import ProjectFinishTime
 
 class DCNEnvironment:
-    def __init__(self, pods=4, link_bw=10000.0, max_num_steps=4):
+    def __init__(self, pods=4, link_bw=10000.0, max_num_steps=4, 
+                 mean_min=1875, mean_max=1875, spread=625):
         self.max_num_steps = 4
 
         # init network and update switch set
@@ -21,12 +22,9 @@ class DCNEnvironment:
         
         # init traffic matrix between tor pairs
         self.traffic_distribution = TrafficDistribution(self.network.num_tor_switches)
-        # self.traffic_matrix = self.traffic_distribution.uniform(mean_min=1875, mean_max=1875, 
-        #                                                    spread=625)
-        # self.traffic_matrix = self.traffic_distribution.uniform(mean_min=2375, mean_max=2375, 
-        #                                                    spread=625)
-        self.traffic_matrix = self.traffic_distribution.uniform(mean_min=1875, mean_max=1875, 
-                                                                spread=1200)
+        self.traffic_matrix = self.traffic_distribution.uniform(mean_min=mean_min, 
+                                                                mean_max=mean_max, 
+                                                                spread=spread)
 
         # waterfilling algorithm for max-min fair bw calculation
         self.max_min_fair_bw_calculator = MaxMinFairBW(self.network, self.traffic_matrix)
@@ -37,10 +35,10 @@ class DCNEnvironment:
                                           baseline_bw_matrix, self.network.bisection_bw)
 
     def get_update_switch_set(self):
-        self.network.update_switch_set
+        return self.network.update_switch_set
     
     def get_max_num_steps(self):
-        self.max_num_steps
+        return self.max_num_steps
     
     # generate all possible one-step update costs
     def get_cost_model(self):
@@ -80,7 +78,10 @@ class DCNEnvironment:
             if node in intermediate_switches:
                 intermediate = 1.0
             q_graph.add_node(node_id, type='s', id=node, 
-                                raw_feats=[intermediate,to_update,num_steps/max_num_steps])
+                                raw_feats=[
+                                intermediate,
+                                to_update,
+                                num_steps/self.max_num_steps])
             s.append(node_id)
             node_id = node_id + 1
         

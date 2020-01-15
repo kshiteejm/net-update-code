@@ -222,7 +222,7 @@ if __name__ == '__main__':
         dataset = sys.argv[5]
     else:
         dataset = "../data"
-    pods = 4
+    pods = 8
     max_num_steps = 4
     total_cost = 0.0
 
