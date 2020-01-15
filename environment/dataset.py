@@ -3,11 +3,11 @@ import numpy as np
 import os, sys
 import networkx as nx
 
-from environment.helpers import powerset, get_baseline_bw_matrix
-from environment.fat_tree_network import FatTreeNetwork
-from environment.traffic_distribution import TrafficDistribution
-from environment.waterfilling import MaxMinFairBW
-from environment.cost_function import CostFunction
+from helpers import powerset, get_baseline_bw_matrix
+from fat_tree_network import FatTreeNetwork
+from traffic_distribution import TrafficDistribution
+from waterfilling import MaxMinFairBW
+from cost_function import CostFunction
 import scipy.sparse
 sys.path.append(os.path.abspath('../'))
 from proj_time import ProjectFinishTime
@@ -222,7 +222,7 @@ if __name__ == '__main__':
         dataset = sys.argv[5]
     else:
         dataset = "../data"
-    pods = 4
+    pods = 8
     max_num_steps = 4
     total_cost = 0.0
 

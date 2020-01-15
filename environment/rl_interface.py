@@ -1,5 +1,5 @@
 import numpy as np
-from environment.dcn_environment import DCNEnvironment
+from dcn_environment import DCNEnvironment
 
 
 class RLEnv(object):
