@@ -1,5 +1,5 @@
 import numpy as np
-from dcn_environment import DCNEnvironment
+from environment.dcn_environment import DCNEnvironment
 
 
 class RLEnv(object):
@@ -39,6 +39,8 @@ class RLEnv(object):
         self.intermediate_switches = set()
         # tuple(sorted(down_switch_idx_set)) -> cost
         self.cost_model = self.dcn_environment.get_cost_model()
+        state = self.get_state()
+        return state
 
     def get_reward(self, down_switch_set):
         # cost model table look up
