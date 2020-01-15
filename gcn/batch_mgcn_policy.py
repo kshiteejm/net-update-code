@@ -84,12 +84,12 @@ class Batch_MGCN_Policy(nn.Module):
         pi = torch.exp(log_pi)
 
         # zero out the entries based on masks
-        pi *= mask
+        masked_pi = pi * mask
 
         # re-normalization
         # TODO: this step might sum over a bunch of near 0 entries
         # need to make sure they don't mess things up (especially
         # deep into the final training stages)
-        pi = F.normalize(pi, p=1, dim=1)
+        masked_pi = F.normalize(masked_pi, p=1, dim=1)
 
-        return log_pi, pi
+        return log_pi, pi, masked_pi

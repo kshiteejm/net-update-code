@@ -4,6 +4,7 @@ import torch.nn as nn
 import numpy as np
 from gcn.batch_mgcn import BatchMGCN
 from gcn.layers import FullyConnectNN
+from torch.distributions import Categorical
 from gcn.batch_mgcn_policy import Batch_MGCN_Policy
 
 
@@ -42,16 +43,45 @@ class TestBatchPolicy(unittest.TestCase):
 
         self.l2_loss = torch.nn.MSELoss(reduction='mean')
 
+        self.entropy_factor = 0.1
+
 
     def test_policy_feedforwarding(self):
-        switch_log_pi, switch_pi = self.mgcn_policy(
+        switch_log_pi, switch_pi, masked_pi = self.mgcn_policy(
             self.node_feats_torch, self.adj_mats_torch, self.switch_mask)
         assert(switch_log_pi.shape[0] == 32)  # batch_size
         assert(switch_log_pi.shape[1] == 21)  # num_switches + 1
 
         # probability sum to 1
         assert(torch.all(torch.abs(torch.sum(
-            switch_pi, dim=1) - 1) < 1e-6).item())
+            masked_pi, dim=1) - 1) < 1e-6).item())
+
+        opt = torch.optim.Adam(self.mgcn_policy.parameters(), lr=1e-3)
+
+        # sample actions based on the probability
+        switch_p = Categorical(masked_pi)
+        switch_a = switch_p.sample()
+        switch_a = switch_a.reshape([-1, 1])
+
+        # test policy gradient can flow through
+        log_pi_acts = switch_log_pi.gather(1, switch_a)
+
+        # dummy advantage
+        adv = torch.FloatTensor(np.random.rand(32, 1))
+
+        # entropy
+        entropy = (switch_log_pi * switch_pi).sum(dim=-1).mean()
+
+        # policy gradient
+        pg_loss = - (log_pi_acts * adv).mean()
+
+        # loss
+        loss = pg_loss + self.entropy_factor * entropy
+
+        # gradient descent
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
 
     def test_policy_gradient(self):
         pass
