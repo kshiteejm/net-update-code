@@ -11,6 +11,7 @@ def main():
     policy_net = Batch_MGCN_Policy(20, [3,3,3,3], 8, [16,32], 8, 8)
     value_net = Batch_MGCN_Value(20, [3,3,3,3], 8, [16,32], 8, 8)
     env = RLEnv()
+
     state = env.reset()
     node_feats_torch, adj_mats_torch, switch_mask_torch = get_tensors(state)
     # convert state
