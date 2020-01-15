@@ -38,13 +38,18 @@ class RLEnv(object):
         self.switches_to_update = self.dcn_environment.get_update_switch_set()
         self.intermediate_switches = set()
         # tuple(sorted(down_switch_idx_set)) -> cost
-        self.cost_model = self.dcn_environment.get_cost_model()
+        # self.cost_model = self.dcn_environment.get_cost_model()
         state = self.get_state()
         return state
 
     def get_reward(self, down_switch_set):
         # cost model table look up
-        return self.cost_model[tuple(sorted(down_switch_set))]
+        # return self.cost_model[tuple(sorted(down_switch_set))]
+        updated_traffic_matrix = self.dcn_environment\
+                                     .max_min_fair_bw_calculator\
+                                     .get_traffic_class_fair_bw_matrix(down_switch_set)
+        cost = self.dcn_environment.cost_function.get_cost(updated_traffic_matrix)
+        return -cost
 
     def get_state(self):
         # takes in topology, switches left to update,
