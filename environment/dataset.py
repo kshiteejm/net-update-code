@@ -41,10 +41,11 @@ class Dataset:
         cost_file = open(cost_file_name, 'w')
         cost_file.write("cost,down_idx\n")
         
-        print(len(list(powerset(switch_set=self.network.update_switch_set))))
+        # cost_file_rows = (2 ** len(self.network.update_switch_set))
+        # print("powerset size: %s" % cost_file_rows)
+        # proj_done_time = ProjectFinishTime(cost_file_rows, same_line=False)
+        # row = 0
         for switch_set in powerset(switch_set=self.network.update_switch_set):
-            import pdb
-            pdb.set_trace()
             updated_bw_matrix = self.max_min_fair_bw_calculator. \
                                      get_traffic_class_fair_bw_matrix(switch_set)
             cost = self.cost_function.get_cost(updated_bw_matrix)
@@ -55,6 +56,9 @@ class Dataset:
             switch_set_string = switch_set_string[:-1]
             
             cost_file.write("%s,%s\n" % (round(cost, 2), switch_set_string))
+            
+            # row = row + 1
+            # proj_done_time.update_progress(row, message="elapsed")
           
         cost_file.close()
 
