@@ -12,7 +12,7 @@ def get_baseline_bw_matrix(max_min_fair_bw_calculator):
     # generate baseline max-min fair bw allocation with all switches active
     baseline_bw_matrix = max_min_fair_bw_calculator.get_traffic_class_fair_bw_matrix(set())
 
-    print(baseline_bw_matrix)
-    print(np.sum(baseline_bw_matrix))
+    # print(baseline_bw_matrix)
+    # print(np.sum(baseline_bw_matrix))
     
     return baseline_bw_matrix

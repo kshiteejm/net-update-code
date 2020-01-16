@@ -42,6 +42,7 @@ class Dataset:
         cost_file = open(cost_file_name, 'w')
         cost_file.write("cost,down_idx\n")
         
+        print(len(list(powerset(switch_set=self.network.update_switch_set))))
         for switch_set in powerset(switch_set=self.network.update_switch_set):
             updated_bw_matrix = self.max_min_fair_bw_calculator. \
                                      get_traffic_class_fair_bw_matrix(switch_set)
@@ -245,14 +246,6 @@ if __name__ == '__main__':
                   dataset, pods, seed, dataset, pods, seed))
     
     optimal_cost_action_file = "%s/values_%s_pods_%s.csv" % (dataset, pods, seed)
-    # if generate_visualizations:
-    #     fat_tree_network.generate_visualization(
-    #                         "%s/action_seq_%s_pods_%s.csv" 
-    #                         % (dataset, pods, seed), 
-    #                         "%s/graph_fat_tree_%s_pods_%s" 
-    #                         % (dataset, pods, seed),
-    #                         optimal_cost_action_file, 
-    #                         max_num_steps)
 
     save_nodefeats_file =  "%s/nodefeats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_adjmats_file =  "%s/adjmats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
