@@ -9,6 +9,8 @@ from torch.distributions import Categorical
 from utils.gen_traj import TrajectoryGenerator
 from gcn.batch_mgcn_value import Batch_MGCN_Value
 from gcn.batch_mgcn_policy import Batch_MGCN_Policy
+from utils.state_transform import get_tensors
+from utils.rewards import cumulative_rewards, gae_advantage
 
 
 def main():
@@ -33,38 +35,37 @@ def main():
 
     # storage for batch training
     batch_node_feats = [np.zeros(
-        config.batch_size, node_feat.shape[1],
-        node_feat.shape[2], dtype=np.float32) for \
+        (config.batch_size, node_feat.shape[0],
+        node_feat.shape[1]), dtype=np.float32) for \
         node_feat in node_feats]
     batch_next_node_feats = [np.zeros(
-        config.batch_size, node_feat.shape[1],
-        node_feat.shape[2], dtype=np.float32) for \
+        (config.batch_size, node_feat.shape[0],
+        node_feat.shape[1]), dtype=np.float32) for \
         node_feat in node_feats]
     batch_adj_mats = [np.zeros(
-        config.batch_size, adj_mat.shape[1],
-        adj_mat.shape[2], dtype=np.float32) for \
+        (config.batch_size, adj_mat.shape[0],
+        adj_mat.shape[1]), dtype=np.float32) for \
         adj_mat in adj_mats]
     batch_switch_masks = np.zeros(
-        config.batch_size, switch_mask.shape[0],
+        (config.batch_size, switch_mask.shape[0]),
         dtype=np.float32)
     batch_actions = np.zeros(
-        config.batch_size, 1, dtype=np.int64)  # Long tensor
+        (config.batch_size, 1), dtype=np.int64)  # Long tensor
     batch_rewards =  np.zeros(
-        config.batch_size, 1, dtype=np.float32)
+        (config.batch_size, 1), dtype=np.float32)
     batch_dones = batch_rewards =  np.zeros(
-        config.batch_size, 1, dtype=np.float32)
+        (config.batch_size, 1), dtype=np.float32)
 
     # perform training
     for train_iter in range(config.num_epochs):
 
         for ba in range(config.batch_size):
-
             node_feats_torch, adj_mats_torch, switch_mask_torch = \
-                convert_tensors(node_feats, adj_mats, switch_mask)
+                get_tensors(node_feats, adj_mats, switch_mask)
 
             # feed forward policy net
             switch_log_pi, switch_pi, masked_pi = policy_net(
-                node_feats_torch, adj_mats_torch, switch_mask)
+                node_feats_torch, adj_mats_torch, switch_mask_torch)
 
             # sample action
             switch_p = Categorical(masked_pi)
@@ -74,10 +75,10 @@ def main():
                 next_switch_mask, reward, done = traj_gen.step(switch_a)
 
             # store into storage
-            for i in len(batch_node_feats):
-                batch_node_feats[i][ba, :, :] = node_feats[i][0, :, :]
-                batch_next_node_feats[i][ba, :, :] = next_node_feats[i][0, :, :]
-                batch_adj_mats[i][ba, :, :] = adj_mats[i][0, :, :]
+            for i in range(len(batch_node_feats)):
+                batch_node_feats[i][ba, :, :] = node_feats[i][:, :]
+                batch_next_node_feats[i][ba, :, :] = next_node_feats[i][:, :]
+                batch_adj_mats[i][ba, :, :] = adj_mats[i][:, :]
             batch_switch_masks[ba, :] = switch_mask
             batch_actions[ba, :] = switch_a
             batch_rewards[ba, :] = reward

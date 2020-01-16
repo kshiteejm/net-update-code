@@ -33,8 +33,8 @@ parser.add_argument('--batch_size', type=int, default=64,
                     help='batch size for policy gradient (default: 64)')
 parser.add_argument('--lr_rate', type=float, default=1e-3,
                     help='learning rate (default: 1e-3)')
-parser.add_argument('--num_epochs', type=int, default=1e5,
-                    help='number of trianing iterations (default: 1e5)')
+parser.add_argument('--num_epochs', type=int, default=10000,
+                    help='number of trianing iterations (default: 10000)')
 parser.add_argument('--gamma', type=float, default=1,
                     help='discount factor (default: 1)')
 parser.add_argument('--lam', type=float, default=1,
