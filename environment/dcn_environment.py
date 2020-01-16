@@ -178,4 +178,10 @@ class DCNEnvironment:
         node_feats = [s_node_features, l_node_features, p_node_features, tc_node_features]
         adj_mats = [adj_matrices['s'], adj_matrices['l'], 
                     adj_matrices['p'], adj_matrices['tc']]
-        return node_feats, adj_mats       
+
+        switch_mask = np.zeros(self.network.num_switches + 1)
+        switch_mask[-1] = 1
+        for switch_id in (update_switch_set - intermediate_switches):
+            switch_mask[switch_id] = 1.0
+
+        return node_feats, adj_mats, switch_mask   
