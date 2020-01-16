@@ -67,7 +67,6 @@ class MaxMinFairBW():
                         #           bi_graph.nodes[link_node]['max_capacity'] - \
                         #             bi_graph.nodes[link_node]['capacity']))
                         bi_graph.remove_node(link_node)
-                        continue
         
         return max_min_fair_path_bws
     

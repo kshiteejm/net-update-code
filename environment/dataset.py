@@ -27,7 +27,6 @@ class Dataset:
         #                                                    spread=625)
         self.traffic_matrix = self.traffic_distribution.uniform(mean_min=1875, mean_max=1875, 
                                                            spread=1200)
-        print(np.sum(self.traffic_matrix))
 
         # waterfilling algorithm for max-min fair bw calculation
         self.max_min_fair_bw_calculator = MaxMinFairBW(self.network, self.traffic_matrix)
