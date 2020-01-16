@@ -1,6 +1,9 @@
 import time
 import torch
+import numpy as np
 from param import config
+from learn.v import value_train
+from learn.pg import policy_gradient
 from environment.rl_interface import RLEnv
 from torch.distributions import Categorical
 from utils.gen_traj import TrajectoryGenerator
@@ -57,7 +60,7 @@ def main():
         for ba in range(config.batch_size):
 
             node_feats_torch, adj_mats_torch, switch_mask_torch = \
-                convert_tensors(node_feats, adj_mats, switch_mask):
+                convert_tensors(node_feats, adj_mats, switch_mask)
 
             # feed forward policy net
             switch_log_pi, switch_pi, masked_pi = policy_net(
@@ -95,20 +98,34 @@ def main():
         batch_dones_torch = torch.from_numpy(batch_dones)
 
         # compute values
-        next_values = value_net(batch_next_node_feats_torch,
-                                batch_adj_mats_torch)
-        next_values_np = next_values.detach().numpy()
+        values_with_grad = value_net(batch_node_feats_torch, adj_mats_torch)
+        values_np = values_with_grad.detach().numpy()
+        next_values_np = value_net(batch_next_node_feats_torch,
+                                batch_adj_mats_torch).detach().numpy()
 
         # aggregate reward
-        cum_rewards = cumulative_rewards(
+        returns_np = cumulative_rewards(
             rewards, dones, config.gamma, next_values_np)
+        returns = torch.from_numpy(returns_np)
 
         # policy gradient
-        
+        adv = gae_advantage(rewards, dones, values_np,
+            next_values_np, config.gamma, config.lam,
+            config.adv_norm)
+        adv = torch.from_numpy(adv)
 
         # value gradient
+        pg_loss, entropy = policy_gradient(
+            policy_net, policy_opt,
+            batch_node_feats_torch, batch_adj_mats_torch, batch_adj_mats_torch,
+            batch_actions, adv, entropy_factor)
+
+        # value training
+        v_loss = value_train(value_net,
+            values_with_grad, returns)
 
         # update entropy factor
+
 
         # monitor
 

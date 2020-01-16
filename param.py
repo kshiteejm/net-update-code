@@ -37,5 +37,7 @@ parser.add_argument('--num_epochs', type=int, default=1e5,
                     help='number of trianing iterations (default: 1e5)')
 parser.add_argument('--gamma', type=float, default=1,
                     help='discount factor (default: 1)')
+parser.add_argument('--lam', type=float, default=1,
+                    help='td lambda (default: 1)')
 
 config, _ = parser.parse_known_args()
