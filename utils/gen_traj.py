@@ -8,20 +8,17 @@ class TrajectoryGenerator(object):
 
     def reset(self):
         state = self.env.reset()
-        node_feats_torch, adj_mats_torch, switch_mask_torch = \
-            get_tensors(state)
-        return node_feats_torch, adj_mats_torch, switch_mask_torch
+        node_feats, adj_mats, switch_mask = state
+        return node_feats, adj_mats, switch_mask
 
     def step(self, action):
-        next_state, reward, done = env.step(action)
+        next_state, reward, done = self.env.step(action)
 
         if done:
             # automatically reset the environment
-            node_feats_torch, adj_mats_torch, switch_mask_torch = \
-                self.reset()
-        else:    
-            node_feats_torch, adj_mats_torch, switch_mask_torch = \
-                get_tensors(next_state)
+            next_state = self.reset()
 
-        return node_feats_torch, adj_mats_torch, switch_mask_torch, \
+        node_feats, adj_mats, switch_mask = next_state
+        
+        return node_feats, adj_mats, switch_mask, \
                reward, done
