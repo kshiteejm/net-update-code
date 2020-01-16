@@ -32,7 +32,7 @@ class MaxMinFairBW():
         if bi_graph.size() == 0:
             return max_min_fair_path_bws
 
-        while bi_graph.number_of_edges() > 0: 
+        while bi_graph.number_of_edges() > 0:
             min_link_node = None
             min_bottleneck_bw = sys.maxsize
 
@@ -67,7 +67,6 @@ class MaxMinFairBW():
                         #           bi_graph.nodes[link_node]['max_capacity'] - \
                         #             bi_graph.nodes[link_node]['capacity']))
                         bi_graph.remove_node(link_node)
-                        continue
         
         return max_min_fair_path_bws
     

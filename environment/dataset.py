@@ -27,7 +27,6 @@ class Dataset:
         #                                                    spread=625)
         self.traffic_matrix = self.traffic_distribution.uniform(mean_min=1875, mean_max=1875, 
                                                            spread=1200)
-        print(np.sum(self.traffic_matrix))
 
         # waterfilling algorithm for max-min fair bw calculation
         self.max_min_fair_bw_calculator = MaxMinFairBW(self.network, self.traffic_matrix)
@@ -42,6 +41,10 @@ class Dataset:
         cost_file = open(cost_file_name, 'w')
         cost_file.write("cost,down_idx\n")
         
+        # cost_file_rows = (2 ** len(self.network.update_switch_set))
+        # print("powerset size: %s" % cost_file_rows)
+        # proj_done_time = ProjectFinishTime(cost_file_rows, same_line=False)
+        # row = 0
         for switch_set in powerset(switch_set=self.network.update_switch_set):
             updated_bw_matrix = self.max_min_fair_bw_calculator. \
                                      get_traffic_class_fair_bw_matrix(switch_set)
@@ -53,6 +56,9 @@ class Dataset:
             switch_set_string = switch_set_string[:-1]
             
             cost_file.write("%s,%s\n" % (round(cost, 2), switch_set_string))
+            
+            # row = row + 1
+            # proj_done_time.update_progress(row, message="elapsed")
           
         cost_file.close()
 
@@ -245,14 +251,6 @@ if __name__ == '__main__':
                   dataset, pods, seed, dataset, pods, seed))
     
     optimal_cost_action_file = "%s/values_%s_pods_%s.csv" % (dataset, pods, seed)
-    # if generate_visualizations:
-    #     fat_tree_network.generate_visualization(
-    #                         "%s/action_seq_%s_pods_%s.csv" 
-    #                         % (dataset, pods, seed), 
-    #                         "%s/graph_fat_tree_%s_pods_%s" 
-    #                         % (dataset, pods, seed),
-    #                         optimal_cost_action_file, 
-    #                         max_num_steps)
 
     save_nodefeats_file =  "%s/nodefeats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
     save_adjmats_file =  "%s/adjmats_fat_tree_%s_pods_%s" % (dataset, pods, seed)
