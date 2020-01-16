@@ -46,6 +46,10 @@ def main():
         (config.batch_size, adj_mat.shape[0],
         adj_mat.shape[1]), dtype=np.float32) for \
         adj_mat in adj_mats]
+    batch_next_adj_mats = [np.zeros(
+        (config.batch_size, adj_mat.shape[0],
+        adj_mat.shape[1]), dtype=np.float32) for \
+        adj_mat in adj_mats]
     batch_switch_masks = np.zeros(
         (config.batch_size, switch_mask.shape[0]),
         dtype=np.float32)
@@ -79,6 +83,7 @@ def main():
                 batch_node_feats[i][ba, :, :] = node_feats[i][:, :]
                 batch_next_node_feats[i][ba, :, :] = next_node_feats[i][:, :]
                 batch_adj_mats[i][ba, :, :] = adj_mats[i][:, :]
+                batch_next_adj_mats[i][ba, :, :] = next_adj_mats[i][:, :]
             batch_switch_masks[ba, :] = switch_mask
             batch_actions[ba, :] = switch_a
             batch_rewards[ba, :] = reward
@@ -90,27 +95,28 @@ def main():
             switch_mask = next_switch_mask
 
         # torchify everything
-        batch_node_feats_torch = torch.from_numpy(batch_node_feats)
-        batch_next_node_feats_torch = torch.from_numpy(batch_next_node_feats)
-        batch_adj_mats_torch = torch.from_numpy(batch_adj_mats)
+        batch_node_feats_torch = [torch.from_numpy(ft) for ft in batch_node_feats] 
+        batch_next_node_feats_torch = [torch.from_numpy(ft) for ft in batch_next_node_feats]
+        batch_adj_mats_torch = [torch.from_numpy(ft) for ft in batch_adj_mats]
+        batch_next_adj_mats_torch = [torch.from_numpy(ft) for ft in batch_next_adj_mats]
         batch_switch_masks_torch = torch.from_numpy(batch_switch_masks)
         batch_actions_torch = torch.from_numpy(batch_actions)
         batch_rewards_torch = torch.from_numpy(batch_rewards)
         batch_dones_torch = torch.from_numpy(batch_dones)
 
         # compute values
-        values_with_grad = value_net(batch_node_feats_torch, adj_mats_torch)
+        values_with_grad = value_net(batch_node_feats_torch, batch_adj_mats_torch)
         values_np = values_with_grad.detach().numpy()
         next_values_np = value_net(batch_next_node_feats_torch,
-                                batch_adj_mats_torch).detach().numpy()
+                                batch_next_adj_mats_torch).detach().numpy()
 
         # aggregate reward
         returns_np = cumulative_rewards(
-            rewards, dones, config.gamma, next_values_np)
+            batch_rewards, batch_dones, config.gamma, next_values_np)
         returns = torch.from_numpy(returns_np)
 
         # policy gradient
-        adv = gae_advantage(rewards, dones, values_np,
+        adv = gae_advantage(batch_rewards, batch_dones, values_np,
             next_values_np, config.gamma, config.lam,
             config.adv_norm)
         adv = torch.from_numpy(adv)
