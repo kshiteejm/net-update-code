@@ -33,16 +33,31 @@ def main():
         config.batch_size, node_feat.shape[1],
         node_feat.shape[2], dtype=np.float32) for \
         node_feat in node_feats]
-    batch_next_node_feats = []
-    batch_adj_mats =  # Float tensor
-    batch_switch_masks = 
-    batch_actions =   # Long tensor
-    batch_rewards =  
-    batch_dones =  # Float tensor 
+    batch_next_node_feats = [np.zeros(
+        config.batch_size, node_feat.shape[1],
+        node_feat.shape[2], dtype=np.float32) for \
+        node_feat in node_feats]
+    batch_adj_mats = [np.zeros(
+        config.batch_size, adj_mat.shape[1],
+        adj_mat.shape[2], dtype=np.float32) for \
+        adj_mat in adj_mats]
+    batch_switch_masks = np.zeros(
+        config.batch_size, switch_mask.shape[0],
+        dtype=np.float32)
+    batch_actions = np.zeros(
+        config.batch_size, 1, dtype=np.int64)  # Long tensor
+    batch_rewards =  np.zeros(
+        config.batch_size, 1, dtype=np.float32)
+    batch_dones = batch_rewards =  np.zeros(
+        config.batch_size, 1, dtype=np.float32)
 
     # perform training
     for train_iter in range(config.num_epochs):
+
         for ba in range(config.batch_size):
+
+            node_feats_torch, adj_mats_torch, switch_mask_torch = \
+                convert_tensors(node_feats, adj_mats, switch_mask):
 
             # feed forward policy net
             switch_log_pi, switch_pi, masked_pi = policy_net(
@@ -50,33 +65,46 @@ def main():
 
             # sample action
             switch_p = Categorical(masked_pi)
-            switch_a = switch_p.sample()
-            switch_a = switch_a.reshape([-1, 1])
+            switch_a = switch_p.sample().item()
 
-            next_node_feats_torch, next_adj_mats_torch, \
-                next_switch_mask_torch, reward, done = traj_gen.step(switch_a)
+            next_node_feats, next_adj_mats, \
+                next_switch_mask, reward, done = traj_gen.step(switch_a)
 
             # store into storage
-            batch_node_feats[] = node_feats_torch
-            batch_next_node_feats[] = next_node_feats_torch
-            batch_adj_mats[] = adj_mats_torch
-            batch_switch_masks[] = switch_mask_torch
-            batch_actions[] = switch_a
-            batch_rewards[] = reward
-            batch_dones[] = done
+            for i in len(batch_node_feats):
+                batch_node_feats[i][ba, :, :] = node_feats[i][0, :, :]
+                batch_next_node_feats[i][ba, :, :] = next_node_feats[i][0, :, :]
+                batch_adj_mats[i][ba, :, :] = adj_mats[i][0, :, :]
+            batch_switch_masks[ba, :] = switch_mask
+            batch_actions[ba, :] = switch_a
+            batch_rewards[ba, :] = reward
+            batch_dones[ba, :] = done
 
             # state advance to next step
-            node_feats_torch = next_node_feats_torch
-            adj_mats_torch = next_adj_mats_torch
-            switch_mask = next_switch_mask_torch
+            node_feats = next_node_feats
+            adj_mats = next_adj_mats
+            switch_mask = next_switch_mask
+
+        # torchify everything
+        batch_node_feats_torch = torch.from_numpy(batch_node_feats)
+        batch_next_node_feats_torch = torch.from_numpy(batch_next_node_feats)
+        batch_adj_mats_torch = torch.from_numpy(batch_adj_mats)
+        batch_switch_masks_torch = torch.from_numpy(batch_switch_masks)
+        batch_actions_torch = torch.from_numpy(batch_actions)
+        batch_rewards_torch = torch.from_numpy(batch_rewards)
+        batch_dones_torch = torch.from_numpy(batch_dones)
 
         # compute values
+        next_values = value_net(batch_next_node_feats_torch,
+                                batch_adj_mats_torch)
+        next_values_np = next_values.detach().numpy()
 
         # aggregate reward
         cum_rewards = cumulative_rewards(
             rewards, dones, config.gamma, next_values_np)
 
         # policy gradient
+        
 
         # value gradient
 
