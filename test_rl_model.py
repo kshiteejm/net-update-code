@@ -1,3 +1,4 @@
+import os
 import sys
 import torch
 import random
@@ -30,6 +31,17 @@ def test_model(policy_net):
 
         print(switch_a, reward)
 
+def get_optimal_action():
+    env = RLEnv()
+    env.reset()
+    env.dcn_environment.generate_costs("/tmp/costs.csv")
+    os.system("cd ./rust-dp; \
+              ./target/debug/rust-dp --num-nodes 20 --num-steps 4 \
+              --update-idx 0 1 2 3 4 5 8 9 12 13 16 17 \
+              --cm-path /tmp/costs.csv \
+              --action-seq-path /tmp/action_seq.csv \
+              --action-path /tmp/actions.csv \
+              --value-path /tmp/values.csv") 
 
 if __name__ == '__main__':
     n_epoch = sys.argv[1]
@@ -45,3 +57,4 @@ if __name__ == '__main__':
     policy_net.load_state_dict(state_dicts)
 
     test_model(policy_net)
+    get_optimal_action()
