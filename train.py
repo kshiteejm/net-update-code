@@ -27,8 +27,9 @@ def main():
         config.link_feat, config.switch_feat], config.n_output,
         config.hid_dim, config.h_size, config.n_steps)
 
-    policy_opt = torch.optim.Adam(policy_net.parameters(), lr=1e-3)
-    value_opt = torch.optim.Adam(value_net.parameters(), lr=1e-3)
+    # optimizer
+    policy_opt = torch.optim.Adam(policy_net.parameters(), lr=config.lr_rate)
+    value_opt = torch.optim.Adam(value_net.parameters(), lr=config.lr_rate)
 
     # trajectory generator
     traj_gen = TrajectoryGenerator()
@@ -62,6 +63,9 @@ def main():
         (config.batch_size, 1), dtype=np.float32)
     batch_dones = batch_rewards =  np.zeros(
         (config.batch_size, 1), dtype=np.float32)
+
+    # initialize entropy factor
+    entropy_factor = config.entropy_factor
 
     # perform training
     for train_iter in range(config.num_epochs):
@@ -122,21 +126,24 @@ def main():
         # policy gradient
         adv = gae_advantage(batch_rewards, batch_dones, values_np,
             next_values_np, config.gamma, config.lam,
-            config.adv_norm)
+            norm=config.adv_norm)
         adv = torch.from_numpy(adv)
         
         # value gradient
         pg_loss, entropy = policy_gradient(
             policy_net, policy_opt,
             batch_states_torch,
-            batch_actions, adv, config.entropy_factor)
+            batch_actions_torch, adv, entropy_factor)
 
         # value training
         v_loss = value_train(value_opt,
             values_with_grad, returns)
 
         # update entropy factor
-
+        if entropy_factor - config.entropy_factor_decay > config.entropy_factor_min:
+            entropy_factor -= config.entropy_factor_decay
+        else:
+            entropy_factor = config.entropy_factor_min
 
         # monitor
 

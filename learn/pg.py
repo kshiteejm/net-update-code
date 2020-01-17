@@ -2,18 +2,14 @@ import torch
 import torch.nn.functional as F
 
 
-def policy_gradient(pi_nn, pi_opt, states, actions,
+def policy_gradient(pi_nn, pi_opt, packed_states, actions,
                     adv, entropy_factor):
 
     # feed forward policy network
-    q = pi_nn(states)
-    log_pi = F.log_softmax(q, dim=-1)
+    log_pi, pi, masked_pi = pi_nn(*packed_states)
 
     # pick based on actions
     log_pi_acts = log_pi.gather(1, actions)
-
-    # expoential operation to get pi
-    pi = torch.exp(log_pi)
 
     # entropy loss
     entropy = (log_pi * pi).sum(dim=-1).mean()

@@ -41,8 +41,12 @@ parser.add_argument('--lam', type=float, default=1,
                     help='td lambda (default: 1)')
 parser.add_argument('--adv_norm', type=int, default=0,
                     help='normalize advantage (default: 0)')
-parser.add_argument('--entropy_factor', type=float, default=0.01,
-                    help='entropy factor for regularization (default: 0.01)')
+parser.add_argument('--entropy_factor', type=float, default=0.1,
+                    help='entropy factor for regularization (default: 0.1)')
+parser.add_argument('--entropy_factor_decay', type=float, default=1e-4,
+                    help='entropy factor for regularization (default: 1e-4)')
+parser.add_argument('--entropy_factor_min', type=float, default=0,
+                    help='entropy factor for regularization (default: 0)')
 
 
 config, _ = parser.parse_known_args()
