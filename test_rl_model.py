@@ -41,7 +41,8 @@ def get_optimal_action():
               --cm-path /tmp/costs.csv \
               --action-seq-path /tmp/action_seq.csv \
               --action-path /tmp/actions.csv \
-              --value-path /tmp/values.csv") 
+              --value-path /tmp/values.csv")
+    os.system("cat /tmp/action_seq.csv")
 
 if __name__ == '__main__':
     n_epoch = sys.argv[1]
