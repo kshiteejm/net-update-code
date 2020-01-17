@@ -77,7 +77,7 @@ def main(n_epoch):
     entropy_factor = config.entropy_factor
 
     # project finish time
-    proj_progress = ProjectFinishTime(config.num_epochs)
+    proj_progress = ProjectFinishTime(config.num_epochs - (n_epoch+1))
 
     # result monitoring
     monitor = SummaryWriter(config.result_folder +
