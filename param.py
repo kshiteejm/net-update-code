@@ -59,5 +59,7 @@ parser.add_argument('--saved_value_model', type=str, default=None,
                     help='path to saved value model (default: None)')
 parser.add_argument('--start_epoch', type=int, default=0,
                     help='intial epoch number (default: 0)')
+parser.add_argument('--heapq_size', type=int, default=32,
+                    help='good stuff heapq size (default: 32)')
 
 config, _ = parser.parse_known_args()
