@@ -84,7 +84,7 @@ def main(n_epoch):
         time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime()))
 
     # perform training
-    for epoch in range(config.num_epochs):
+    for epoch in range(n_epoch + 1, config.num_epochs):
 
         for ba in range(config.batch_size):
             node_feats_torch, adj_mats_torch, switch_mask_torch = \
@@ -181,7 +181,7 @@ def main(n_epoch):
 
 
 if __name__ == '__main__':
-    n_epoch = 0
+    n_epoch = -1
     if len(sys.argv) > 1:
         n_epoch = int(sys.argv[1])
     main(n_epoch)
