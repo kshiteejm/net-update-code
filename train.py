@@ -10,6 +10,7 @@ from utils.proj_time import ProjectFinishTime
 from utils.state_transform import get_tensors
 from utils.gen_traj import TrajectoryGenerator
 from gcn.batch_mgcn_value import Batch_MGCN_Value
+from torch.utils.tensorboard import SummaryWriter
 from gcn.batch_mgcn_policy import Batch_MGCN_Policy
 from utils.rewards import cumulative_rewards, gae_advantage
 
@@ -71,8 +72,12 @@ def main():
     # project finish time
     proj_progress = ProjectFinishTime(config.num_epochs)
 
+    # result monitoring
+    monitor = SummaryWriter(config.result_folder +
+        time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime()))
+
     # perform training
-    for train_iter in range(config.num_epochs):
+    for epoch in range(config.num_epochs):
 
         for ba in range(config.batch_size):
             node_feats_torch, adj_mats_torch, switch_mask_torch = \
@@ -150,10 +155,22 @@ def main():
             entropy_factor = config.entropy_factor_min
 
         # monitor
-        proj_progress.update_progress(train_iter)
+        proj_progress.update_progress(epoch)
+        monitor.add_scalar('Loss/pg_loss', pg_loss, epoch)
+        monitor.add_scalar('Loss/v_loss', v_loss, epoch)
+        monitor.add_scalar('Reward/avg_reward',
+            get_monitor_total_rewards(batch_rewards, batch_dones), epoch)
+        monitor.add_scalar('Entropy/norm_entropy',
+            entropy / - np.log(config.num_switches), epoch)
+        monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
+        monitor.add_scalar('Time/elapsed', proj_progress.delta_time, epoch)
 
         # save model, do testing
-
+        if epoch % config.model_saving_interval == 0:
+            torch.save(policy_net.state_dict(), config.result_folder +
+                'policy_net_epoch_{}'.format(epoch))
+            torch.save(value_net.state_dict(), config.result_folder +
+                'value_net_epoch_{}'.format(epoch))
 
 
 if __name__ == '__main__':

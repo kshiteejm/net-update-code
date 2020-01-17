@@ -25,13 +25,14 @@ class ProjectFinishTime(object):
     def reset_timer(self):
         self.init_time = time.time()
         self.last_time = self.init_time
+        self.delta_time = 0
 
     def update_progress(self, step, message="elapsed"):
         curr_time = time.time()
-        delta_time = curr_time - self.last_time
+        self.delta_time = curr_time - self.last_time
         self.last_time = curr_time
         print('{} time: {}s'.format(
-              message, delta_time), end=self.end)
+              message, self.delta_time), end=self.end)
         done_portion = (step - self.init_step) / \
                        (self.total_steps - self.init_step)
         done_time = curr_time - self.init_time

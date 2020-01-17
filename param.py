@@ -47,6 +47,10 @@ parser.add_argument('--entropy_factor_decay', type=float, default=1e-4,
                     help='entropy factor for regularization (default: 1e-4)')
 parser.add_argument('--entropy_factor_min', type=float, default=0,
                     help='entropy factor for regularization (default: 0)')
+parser.add_argument('--model_saving_interval', type=int, default=100,
+                    help='model saving interval (default: 100)')
+parser.add_argument('--result_folder', type=str, default='./results/',
+                    help='result folder (default: ./results/)')
 
 
 config, _ = parser.parse_known_args()

@@ -8,6 +8,7 @@ from gcn.unit_test.test_batch_graph import TestBatchGraph
 from gcn.unit_test.test_batch_policy import TestBatchPolicy
 from gcn.unit_test.test_param import TestParams
 from environment.unit_test.test_env import TestEnv
+from utils.unit_test.test_rewards import TestRewards
 
 
 if __name__ == '__main__':

@@ -61,3 +61,25 @@ def gae_advantage(rewards, dones, values, next_values,
         adv = (adv - adv.mean()) / (adv.std() + config.eps)
 
     return adv
+
+def get_monitor_total_rewards(rewards, dones):
+    r = None
+    monitor_rewards = []
+    for i in reversed(range(len(rewards))):
+        if dones[i] == 1:
+            if r is not None:
+                monitor_rewards.append(r)
+            r = 0
+
+        if r is not None:
+            r += rewards[i]
+
+    if r is not None:
+        monitor_rewards.append(r)
+
+    if len(monitor_rewards) == 0:
+        monitor_rewards = 0
+    else:
+        monitor_rewards = np.mean(monitor_rewards)
+
+    return monitor_rewards
