@@ -170,7 +170,7 @@ def main():
         monitor.add_scalar('Reward/min_reward', min(monitor_reward), epoch)
         monitor.add_scalar('Reward/max_reward', max(monitor_reward), epoch)
         monitor.add_scalar('Entropy/norm_entropy',
-            entropy / - np.log(config.num_switches), epoch)
+            entropy / - np.log(config.num_switches + 1), epoch)
         monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
         monitor.add_scalar('Time/elapsed', proj_progress.delta_time, epoch)
 
