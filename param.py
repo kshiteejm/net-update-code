@@ -51,6 +51,11 @@ parser.add_argument('--model_saving_interval', type=int, default=100,
                     help='model saving interval (default: 100)')
 parser.add_argument('--result_folder', type=str, default='./results/',
                     help='result folder (default: ./results/)')
-
+parser.add_argument('--saved_policy_model', type=str, default=None,
+                    help='path to saved policy model (default: None)')
+parser.add_argument('--saved_value_model', type=str, default=None,
+                    help='path to saved value model (default: None)')
+parser.add_argument('--start_epoch', type=int, default=0,
+                    help='intial epoch number (default: 0)')
 
 config, _ = parser.parse_known_args()

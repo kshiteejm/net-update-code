@@ -18,7 +18,7 @@ from gcn.batch_mgcn_policy import Batch_MGCN_Policy
 from utils.rewards import get_monitor_total_rewards
 
 
-def main(n_epoch):
+def main():
 
     # policy network for taking actions and policy gradient
     policy_net = Batch_MGCN_Policy(
@@ -32,14 +32,11 @@ def main(n_epoch):
         config.link_feat, config.switch_feat], config.n_output,
         config.hid_dim, config.h_size, config.n_steps)
     
-    if n_epoch > 0:
-        state_dicts = torch.load(config.result_folder + 
-                                 "policy_net_epoch_{}".format(n_epoch))
-        policy_net.load_state_dict(state_dicts)
-        
-        state_dicts = torch.load(config.result_folder + 
-                                 "value_net_epoch_{}".format(n_epoch))
-        value_net.load_state_dict(state_dicts)
+    if config.saved_policy_model is not None:
+        policy_net.load_state_dict(torch.load(config.saved_policy_model))
+
+    if config.saved_value_model is not None:
+        value_net.load_state_dict(torch.load(config.saved_value_model))
 
     # optimizer
     policy_opt = torch.optim.Adam(policy_net.parameters(), lr=config.lr_rate)
@@ -77,14 +74,14 @@ def main(n_epoch):
     entropy_factor = config.entropy_factor
 
     # project finish time
-    proj_progress = ProjectFinishTime(config.num_epochs - (n_epoch+1))
+    proj_progress = ProjectFinishTime(config.num_epochs - (config.start_epoch))
 
     # result monitoring
     monitor = SummaryWriter(config.result_folder +
         time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime()))
 
     # perform training
-    for epoch in range(n_epoch + 1, config.num_epochs):
+    for epoch in range(config.start_epoch, config.num_epochs):
 
         for ba in range(config.batch_size):
             node_feats_torch, adj_mats_torch, switch_mask_torch = \
@@ -183,7 +180,4 @@ def main(n_epoch):
 
 
 if __name__ == '__main__':
-    n_epoch = -1
-    if len(sys.argv) > 1:
-        n_epoch = int(sys.argv[1])
-    main(n_epoch)
+    main()
