@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from param import config
 from environment.dcn_environment import DCNEnvironment
 
 
