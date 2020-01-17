@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from environment.dcn_environment import DCNEnvironment
 

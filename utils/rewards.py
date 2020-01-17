@@ -78,8 +78,6 @@ def get_monitor_total_rewards(rewards, dones):
         monitor_rewards.append(r)
 
     if len(monitor_rewards) == 0:
-        monitor_rewards = 0
-    else:
-        monitor_rewards = np.mean(monitor_rewards)
+        monitor_rewards.append(0)
 
     return monitor_rewards

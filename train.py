@@ -163,10 +163,12 @@ def main(n_epoch):
 
         # monitor
         proj_progress.update_progress(epoch)
+        monitor_reward = get_monitor_total_rewards(batch_rewards, batch_dones)
         monitor.add_scalar('Loss/pg_loss', pg_loss, epoch)
         monitor.add_scalar('Loss/v_loss', v_loss, epoch)
-        monitor.add_scalar('Reward/avg_reward',
-            get_monitor_total_rewards(batch_rewards, batch_dones), epoch)
+        monitor.add_scalar('Reward/avg_reward', np.mean(monitor_reward), epoch)
+        monitor.add_scalar('Reward/min_reward', min(monitor_reward), epoch)
+        monitor.add_scalar('Reward/max_reward', max(monitor_reward), epoch)
         monitor.add_scalar('Entropy/norm_entropy',
             entropy / - np.log(config.num_switches), epoch)
         monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
