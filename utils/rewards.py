@@ -74,10 +74,7 @@ def get_monitor_total_rewards(rewards, dones):
         if r is not None:
             r += rewards[i]
 
-    if r is not None:
-        monitor_rewards.append(r)
-
     if len(monitor_rewards) == 0:
-        monitor_rewards.append(0)
+        monitor_rewards.append(4)
 
     return monitor_rewards
