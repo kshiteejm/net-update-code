@@ -39,5 +39,10 @@ parser.add_argument('--gamma', type=float, default=1,
                     help='discount factor (default: 1)')
 parser.add_argument('--lam', type=float, default=1,
                     help='td lambda (default: 1)')
+parser.add_argument('--adv_norm', type=int, default=0,
+                    help='normalize advantage (default: 0)')
+parser.add_argument('--entropy_factor', type=float, default=0.01,
+                    help='entropy factor for regularization (default: 0.01)')
+
 
 config, _ = parser.parse_known_args()

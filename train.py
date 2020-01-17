@@ -27,6 +27,9 @@ def main():
         config.link_feat, config.switch_feat], config.n_output,
         config.hid_dim, config.h_size, config.n_steps)
 
+    policy_opt = torch.optim.Adam(policy_net.parameters(), lr=1e-3)
+    value_opt = torch.optim.Adam(value_net.parameters(), lr=1e-3)
+
     # trajectory generator
     traj_gen = TrajectoryGenerator()
 
@@ -103,6 +106,7 @@ def main():
         batch_actions_torch = torch.from_numpy(batch_actions)
         batch_rewards_torch = torch.from_numpy(batch_rewards)
         batch_dones_torch = torch.from_numpy(batch_dones)
+        batch_states_torch = (batch_node_feats_torch, batch_adj_mats_torch, batch_switch_masks_torch)
 
         # compute values
         values_with_grad = value_net(batch_node_feats_torch, batch_adj_mats_torch)
@@ -120,15 +124,15 @@ def main():
             next_values_np, config.gamma, config.lam,
             config.adv_norm)
         adv = torch.from_numpy(adv)
-
+        
         # value gradient
         pg_loss, entropy = policy_gradient(
             policy_net, policy_opt,
-            batch_node_feats_torch, batch_adj_mats_torch, batch_adj_mats_torch,
-            batch_actions, adv, entropy_factor)
+            batch_states_torch,
+            batch_actions, adv, config.entropy_factor)
 
         # value training
-        v_loss = value_train(value_net,
+        v_loss = value_train(value_opt,
             values_with_grad, returns)
 
         # update entropy factor

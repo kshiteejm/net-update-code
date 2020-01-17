@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 def policy_gradient(pi_nn, pi_opt, states, actions,
-                    adv, log_probs, entropy_factor):
+                    adv, entropy_factor):
 
     # feed forward policy network
     q = pi_nn(states)
