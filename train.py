@@ -169,7 +169,7 @@ def main():
         monitor.add_scalar('Reward/avg_reward', np.mean(monitor_reward), epoch)
         monitor.add_scalar('Reward/min_reward', min(monitor_reward), epoch)
         monitor.add_scalar('Reward/max_reward', max(monitor_reward), epoch)
-        monitor.add_histogram('Reward/sum_rewards', monitor_reward, epoch)
+        monitor.add_histogram('Reward/sum_rewards', np.array(monitor_reward), epoch)
         monitor.add_scalar('Entropy/norm_entropy',
             entropy / - np.log(config.num_switches + 1), epoch)
         monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
