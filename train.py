@@ -44,28 +44,23 @@ def main():
     # storage for batch training
     batch_node_feats = [np.zeros(
         (config.batch_size, node_feat.shape[0],
-        node_feat.shape[1]), dtype=np.float32) for \
-        node_feat in node_feats]
+        node_feat.shape[1]), dtype=np.float32) for node_feat in node_feats]
     batch_next_node_feats = [np.zeros(
         (config.batch_size, node_feat.shape[0],
-        node_feat.shape[1]), dtype=np.float32) for \
-        node_feat in node_feats]
+        node_feat.shape[1]), dtype=np.float32) for node_feat in node_feats]
     batch_adj_mats = [np.zeros(
         (config.batch_size, adj_mat.shape[0],
-        adj_mat.shape[1]), dtype=np.float32) for \
-        adj_mat in adj_mats]
+        adj_mat.shape[1]), dtype=np.float32) for adj_mat in adj_mats]
     batch_next_adj_mats = [np.zeros(
         (config.batch_size, adj_mat.shape[0],
-        adj_mat.shape[1]), dtype=np.float32) for \
-        adj_mat in adj_mats]
+        adj_mat.shape[1]), dtype=np.float32) for adj_mat in adj_mats]
     batch_switch_masks = np.zeros(
-        (config.batch_size, switch_mask.shape[0]),
-        dtype=np.float32)
+        (config.batch_size, switch_mask.shape[0]), dtype=np.float32)
     batch_actions = np.zeros(
         (config.batch_size, 1), dtype=np.int64)  # Long tensor
     batch_rewards =  np.zeros(
         (config.batch_size, 1), dtype=np.float32)
-    batch_dones = batch_rewards =  np.zeros(
+    batch_dones =  np.zeros(
         (config.batch_size, 1), dtype=np.float32)
 
     # initialize entropy factor
