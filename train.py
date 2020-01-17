@@ -4,15 +4,17 @@ import numpy as np
 from param import config
 from learn.v import value_train
 from learn.pg import policy_gradient
+from utils.rewards import gae_advantage
 from environment.rl_interface import RLEnv
 from torch.distributions import Categorical
+from utils.rewards import cumulative_rewards
 from utils.proj_time import ProjectFinishTime
 from utils.state_transform import get_tensors
 from utils.gen_traj import TrajectoryGenerator
 from gcn.batch_mgcn_value import Batch_MGCN_Value
 from torch.utils.tensorboard import SummaryWriter
 from gcn.batch_mgcn_policy import Batch_MGCN_Policy
-from utils.rewards import cumulative_rewards, gae_advantage
+from utils.rewards import get_monitor_total_rewards
 
 
 def main():
