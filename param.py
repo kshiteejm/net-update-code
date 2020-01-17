@@ -27,6 +27,8 @@ parser.add_argument('--h_size', type=int, default=8,
                     help='message passing hidden features (default: 8)')
 parser.add_argument('--n_steps', type=int, default=8,
                     help='number of message passing steps (default: 8)')
+parser.add_argument('--repeat_exp', type=int, default=0,
+                    help='repeat the same setup (default: 0)')
 
 # -- Learning --
 parser.add_argument('--batch_size', type=int, default=64,

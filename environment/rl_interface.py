@@ -35,6 +35,9 @@ class RLEnv(object):
         return state, reward, done
 
     def reset(self):
+        if config.repeat_exp:
+            np.random.seed(config.seed)
+            random.seed(config.seed)
         # update a new environment
         # potentially new topology, new set of
         # switches to update, new traffic matrix
