@@ -20,6 +20,9 @@ from utils.rewards import get_monitor_total_rewards
 
 def main():
 
+    # reproducibility
+    torch.manual_seed(config.seed)
+
     # policy network for taking actions and policy gradient
     policy_net = Batch_MGCN_Policy(
         config.num_switches, [config.class_feat, config.path_feat,
