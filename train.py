@@ -183,5 +183,5 @@ def main(n_epoch):
 if __name__ == '__main__':
     n_epoch = 0
     if len(sys.argv) > 1:
-        n_epoch = sys.argv[1]
+        n_epoch = int(sys.argv[1])
     main(n_epoch)
