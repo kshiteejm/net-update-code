@@ -10,7 +10,7 @@ from environment.waterfilling import MaxMinFairBW
 from environment.cost_function import CostFunction
 import scipy.sparse
 sys.path.append(os.path.abspath('../'))
-from proj_time import ProjectFinishTime
+from utils.proj_time import ProjectFinishTime
 
 class DCNEnvironment:
     def __init__(self, pods=4, link_bw=10000.0, max_num_steps=4, 

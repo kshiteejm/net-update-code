@@ -6,10 +6,11 @@ from learn.v import value_train
 from learn.pg import policy_gradient
 from environment.rl_interface import RLEnv
 from torch.distributions import Categorical
+from utils.proj_time import ProjectFinishTime
+from utils.state_transform import get_tensors
 from utils.gen_traj import TrajectoryGenerator
 from gcn.batch_mgcn_value import Batch_MGCN_Value
 from gcn.batch_mgcn_policy import Batch_MGCN_Policy
-from utils.state_transform import get_tensors
 from utils.rewards import cumulative_rewards, gae_advantage
 
 
@@ -66,6 +67,9 @@ def main():
 
     # initialize entropy factor
     entropy_factor = config.entropy_factor
+
+    # project finish time
+    proj_progress = ProjectFinishTime(config.num_epochs)
 
     # perform training
     for train_iter in range(config.num_epochs):
@@ -146,6 +150,7 @@ def main():
             entropy_factor = config.entropy_factor_min
 
         # monitor
+        proj_progress.update_progress(train_iter)
 
         # save model, do testing
 

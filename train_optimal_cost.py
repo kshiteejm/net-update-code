@@ -1,17 +1,17 @@
 import os
+import sys
 import time
-from proj_time import ProjectFinishTime
 import torch
-import torch.nn as nn
+import random
 import numpy as np
 import scipy.sparse
-from gcn.mgcn_value import MGCN_Value
-from gcn.batch_mgcn_value import Batch_MGCN_Value
+import torch.nn as nn
 from gcn.layers import FullyConnectNN
-import random
-from torch.utils.tensorboard import SummaryWriter
+from gcn.mgcn_value import MGCN_Value
+from utils.proj_time import ProjectFinishTime
 from utils.weight_scale import get_param_scale
-import sys
+from gcn.batch_mgcn_value import Batch_MGCN_Value
+from torch.utils.tensorboard import SummaryWriter
 
 
 def train(seed, dataset, dataset_size, model_dir):
