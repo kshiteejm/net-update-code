@@ -1,5 +1,7 @@
 import sys
 import torch
+import random
+import numpy as np
 from param import config
 from environment.rl_interface import RLEnv
 from torch.distributions import Categorical
@@ -31,6 +33,9 @@ def test_model(policy_net):
 
 if __name__ == '__main__':
     n_epoch = sys.argv[1]
+
+    np.random.seed(config.seed)
+    random.seed(config.seed)
 
     policy_net = Batch_MGCN_Policy(
         config.num_switches, [config.class_feat, config.path_feat,
