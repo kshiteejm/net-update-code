@@ -255,7 +255,7 @@ def main():
             entropy_factor = config.entropy_factor_min
 
         monitor.add_scalar('Reward/good_stuff_average',
-            np.mean([i for (i, _) in traj_store.pq]), epoch)
+            np.mean([i for (i, _, _) in traj_store.pq]), epoch)
         monitor.add_scalar('Reward/good_stuff_size', len(traj_store.pq), epoch)
 
         # save model, do testing
