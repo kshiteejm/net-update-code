@@ -234,12 +234,12 @@ def main():
             good_exp.batch_rewards, good_exp.batch_dones, config.gamma, next_values_np)
         returns = torch.from_numpy(returns_np)
 
-        # policy gradient
+        # advantage calculation
         adv = gae_advantage(good_exp.batch_rewards, good_exp.batch_dones, values_np,
             next_values_np, config.gamma, config.lam, norm=config.adv_norm)
         adv = torch.from_numpy(adv)
 
-        # value gradient
+        # policy gradient
         pg_loss, entropy = policy_gradient(
             policy_net, policy_opt, batch_states_torch,
             batch_actions_torch, adv, entropy_factor, batch_pi_torch)
