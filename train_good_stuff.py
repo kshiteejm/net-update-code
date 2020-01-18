@@ -140,7 +140,7 @@ def main():
             # sample action
             switch_p = Categorical(masked_pi)
             switch_a = switch_p.sample().item()
-            pi_a = masked_pi[switch_a].item()
+            pi_a = masked_pi[0, switch_a].item()
 
             next_node_feats, next_adj_mats, \
                 next_switch_mask, reward, done = traj_gen.step(switch_a)

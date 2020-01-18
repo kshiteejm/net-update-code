@@ -18,7 +18,7 @@ class TrajStore(object):
         self.r += reward
 
         if done:
-            heapq.heappush(self.r, self.curr_q)
+            heapq.heappush(self.pq, (self.r, self.curr_q))
             if len(self.pq) > config.heapq_size:
                 heapq.heappop()
             self.curr_q = []
