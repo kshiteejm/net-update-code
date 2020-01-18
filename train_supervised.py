@@ -208,7 +208,7 @@ def main():
         v_loss = value_train(value_opt,
             values_with_grad, returns)
 
-        monitor.add_scalar('Loss/pg_loss', p_loss, epoch)
+        monitor.add_scalar('Loss/p_loss', p_loss, epoch)
         monitor.add_scalar('Loss/v_loss', v_loss, epoch)
         monitor.add_scalar('Reward/good_stuff_average',
             np.mean([i for (i, _, _) in traj_store.pq]), epoch)
