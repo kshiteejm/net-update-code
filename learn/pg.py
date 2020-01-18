@@ -12,7 +12,7 @@ def policy_gradient(pi_nn, pi_opt, packed_states, actions,
     log_pi_acts = log_pi.gather(1, actions)
 
     # importance sampling
-    if pi is not None:
+    if pi_old is not None:
         pi_acts = masked_pi.gather(1, actions)
         log_pi_acts *= pi_acts / pi_old
 
