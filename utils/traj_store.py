@@ -20,7 +20,7 @@ class TrajStore(object):
         if done:
             heapq.heappush(self.pq, (self.r, self.curr_q))
             if len(self.pq) > config.heapq_size:
-                heapq.heappop()
+                heapq.heappop(self.pg)
             self.curr_q = []
             self.r = 0
 

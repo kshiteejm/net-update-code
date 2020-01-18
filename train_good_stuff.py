@@ -45,7 +45,7 @@ class Batch(object):
             (config.batch_size, 1), dtype=np.float32)
 
     def add(self, ba, node_feats, next_node_feats, adj_mats,
-            next_adj_mats, switch_mask, switch_a, reward, done, pi):
+            next_adj_mats, switch_mask, switch_a, reward, pi, done):
         for i in range(len(self.batch_node_feats)):
             self.batch_node_feats[i][ba, :, :] = node_feats[i][:, :]
             self.batch_next_node_feats[i][ba, :, :] = next_node_feats[i][:, :]
@@ -147,7 +147,7 @@ def main():
 
             # store into storage
             batch_exp.add(ba, node_feats, next_node_feats, adj_mats, next_adj_mats,
-                          switch_mask, switch_a, reward, done, pi_a)
+                          switch_mask, switch_a, reward, pi_a, done)
 
             # store the experience for good stuff
             traj_store.add(node_feats, next_node_feats, adj_mats, next_adj_mats,
@@ -207,12 +207,9 @@ def main():
         ba = 0
         while True:
             traj = traj_store.get()
-            for (node_feats, next_node_feats,
-                 adj_mats, next_adj_mats, switch_mask,
-                 switch_a, reward, pi, done) in traj:
+            for stuff in traj:
 
-                good_exp.add(ba, node_feats, next_node_feats, adj_mats, next_adj_mats,
-                             switch_mask, switch_a, reward, done, pi)
+                good_exp.add(ba, *stuff)
 
                 ba += 1
                 if ba >= config.batch_size:
@@ -259,6 +256,7 @@ def main():
 
         monitor.add_scalar('Reward/good_stuff_average',
             np.mean([i for (i, _) in traj_store.pq]), epoch)
+        monitor.add_scalar('Reward/good_stuff_size', len(traj_store.pq), epoch)
 
         # save model, do testing
         if epoch % config.model_saving_interval == 0:
