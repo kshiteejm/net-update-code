@@ -258,8 +258,7 @@ def main():
             entropy_factor = config.entropy_factor_min
 
         monitor.add_scalar('Reward/good_stuff_average',
-            np.mean([i for (i, _) in traj_store.pq]) max(monitor_reward),
-            epoch)
+            np.mean([i for (i, _) in traj_store.pq]), epoch)
 
         # save model, do testing
         if epoch % config.model_saving_interval == 0:
