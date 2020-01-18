@@ -5,6 +5,7 @@ import numpy as np
 from param import config
 from learn.v import value_train
 from learn.pg import policy_gradient
+from utils.traj_store import TrajStore
 from utils.rewards import gae_advantage
 from environment.rl_interface import RLEnv
 from torch.distributions import Categorical
@@ -40,9 +41,11 @@ class Batch(object):
             (config.batch_size, 1), dtype=np.float32)
         self.batch_dones =  np.zeros(
             (config.batch_size, 1), dtype=np.float32)
+        self.batch_pi =  np.zeros(
+            (config.batch_size, 1), dtype=np.float32)
 
     def add(self, ba, node_feats, next_node_feats, adj_mats,
-            next_adj_mats, switch_mask, switch_a, reward, done):
+            next_adj_mats, switch_mask, switch_a, reward, done, pi):
         for i in range(len(self.batch_node_feats)):
             self.batch_node_feats[i][ba, :, :] = node_feats[i][:, :]
             self.batch_next_node_feats[i][ba, :, :] = next_node_feats[i][:, :]
@@ -52,6 +55,7 @@ class Batch(object):
         self.batch_actions[ba, :] = switch_a
         self.batch_rewards[ba, :] = reward
         self.batch_dones[ba, :] = done
+        self.batch_pi[ba, :] = pi
 
     def torchify(self):
         batch_node_feats_torch = [torch.from_numpy(ft) for ft in self.batch_node_feats] 
@@ -62,11 +66,12 @@ class Batch(object):
         batch_actions_torch = torch.from_numpy(self.batch_actions)
         batch_rewards_torch = torch.from_numpy(self.batch_rewards)
         batch_dones_torch = torch.from_numpy(self.batch_dones)
+        batch_pi_torch = torch.from_numpy(self.batch_pi)
         batch_states_torch = (batch_node_feats_torch, batch_adj_mats_torch, batch_switch_masks_torch)
 
         return batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
                batch_next_adj_mats_torch, batch_switch_masks_torch, batch_actions_torch, \
-               batch_rewards_torch, batch_dones_torch, batch_states_torch
+               batch_rewards_torch, batch_dones_torch, batch_pi_torch, batch_states_torch
 
 
 def main():
@@ -99,17 +104,23 @@ def main():
     # trajectory generator
     traj_gen = TrajectoryGenerator()
 
+    # trajectory storage (for good stuff)
+    traj_store = TrajStore()
+
     # initial state
     node_feats, adj_mats, switch_mask = traj_gen.reset()
 
     # storage for batch training
     batch_exp = Batch(node_feats, adj_mats, switch_mask)
 
+    # good stuff experience
+    good_exp = Batch(node_feats, adj_mats, switch_mask)
+
     # initialize entropy factor
     entropy_factor = config.entropy_factor
 
     # project finish time
-    proj_progress = ProjectFinishTime(config.num_epochs - (config.start_epoch))
+    proj_progress = ProjectFinishTime(config.num_epochs - config.start_epoch)
 
     # result monitoring
     monitor = SummaryWriter(config.result_folder +
@@ -129,13 +140,18 @@ def main():
             # sample action
             switch_p = Categorical(masked_pi)
             switch_a = switch_p.sample().item()
+            pi_a = masked_pi[switch_a].item()
 
             next_node_feats, next_adj_mats, \
                 next_switch_mask, reward, done = traj_gen.step(switch_a)
 
             # store into storage
             batch_exp.add(ba, node_feats, next_node_feats, adj_mats, next_adj_mats,
-                          switch_mask, switch_a, reward, done)
+                          switch_mask, switch_a, reward, done, pi_a)
+
+            # store the experience for good stuff
+            traj_store.add(node_feats, next_node_feats, adj_mats, next_adj_mats,
+                          switch_mask, switch_a, reward, pi_a, done)
 
             # state advance to next step
             node_feats = next_node_feats
@@ -145,7 +161,7 @@ def main():
         # torchify everything
         batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
         batch_next_adj_mats_torch, batch_switch_masks_torch, batch_actions_torch, \
-        batch_rewards_torch, batch_dones_torch, batch_states_torch = \
+        batch_rewards_torch, batch_dones_torch, batch_pi_torch, batch_states_torch = \
             batch_exp.torchify()
 
         # compute values
@@ -161,25 +177,17 @@ def main():
 
         # policy gradient
         adv = gae_advantage(batch_exp.batch_rewards, batch_exp.batch_dones, values_np,
-            next_values_np, config.gamma, config.lam,
-            norm=config.adv_norm)
+            next_values_np, config.gamma, config.lam, norm=config.adv_norm)
         adv = torch.from_numpy(adv)
         
         # value gradient
         pg_loss, entropy = policy_gradient(
-            policy_net, policy_opt,
-            batch_states_torch,
-            batch_actions_torch, adv, entropy_factor)
+            policy_net, policy_opt, batch_states_torch,
+            batch_actions_torch, adv, entropy_factor, batch_pi_torch)
 
         # value training
         v_loss = value_train(value_opt,
             values_with_grad, returns)
-
-        # update entropy factor
-        if entropy_factor - config.entropy_factor_decay > config.entropy_factor_min:
-            entropy_factor -= config.entropy_factor_decay
-        else:
-            entropy_factor = config.entropy_factor_min
 
         # monitor
         proj_progress.update_progress(epoch)
@@ -194,6 +202,64 @@ def main():
             entropy / - np.log(config.num_switches + 1), epoch)
         monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
         monitor.add_scalar('Time/elapsed', proj_progress.delta_time, epoch)
+
+        # do the good stuff training
+        ba = 0
+        while True:
+            traj = traj_store.get()
+            for (node_feats, next_node_feats,
+                 adj_mats, next_adj_mats, switch_mask,
+                 switch_a, reward, pi, done) in traj:
+
+                good_exp.add(ba, node_feats, next_node_feats, adj_mats, next_adj_mats,
+                             switch_mask, switch_a, reward, done, pi)
+
+                ba += 1
+                if ba >= config.batch_size:
+                    break
+            if ba >= config.batch_size:
+                    break
+
+        # torchify everything
+        batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
+        batch_next_adj_mats_torch, batch_switch_masks_torch, batch_actions_torch, \
+        batch_rewards_torch, batch_dones_torch, batch_pi_torch, batch_states_torch = \
+            good_exp.torchify()
+
+        # compute values
+        values_with_grad = value_net(batch_node_feats_torch, batch_adj_mats_torch)
+        values_np = values_with_grad.detach().numpy()
+        next_values_np = value_net(batch_next_node_feats_torch,
+                                batch_next_adj_mats_torch).detach().numpy()
+
+        # aggregate reward
+        returns_np = cumulative_rewards(
+            good_exp.batch_rewards, good_exp.batch_dones, config.gamma, next_values_np)
+        returns = torch.from_numpy(returns_np)
+
+        # policy gradient
+        adv = gae_advantage(good_exp.batch_rewards, good_exp.batch_dones, values_np,
+            next_values_np, config.gamma, config.lam, norm=config.adv_norm)
+        adv = torch.from_numpy(adv)
+
+        # value gradient
+        pg_loss, entropy = policy_gradient(
+            policy_net, policy_opt, batch_states_torch,
+            batch_actions_torch, adv, entropy_factor, batch_pi_torch)
+
+        # value training
+        v_loss = value_train(value_opt,
+            values_with_grad, returns)
+
+        # update entropy factor
+        if entropy_factor - config.entropy_factor_decay > config.entropy_factor_min:
+            entropy_factor -= config.entropy_factor_decay
+        else:
+            entropy_factor = config.entropy_factor_min
+
+        monitor.add_scalar('Reward/good_stuff_average',
+            np.mean([i for (i, _) in traj_store.pq]) max(monitor_reward),
+            epoch)
 
         # save model, do testing
         if epoch % config.model_saving_interval == 0:
