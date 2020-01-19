@@ -74,5 +74,5 @@ if __name__ == '__main__':
     if config.saved_value_model is not None:
         value_net.load_state_dict(torch.load(config.saved_value_model))
 
-    test_model(policy_net)
+    test_model(policy_net, value_net)
     # get_optimal_action()
