@@ -30,12 +30,16 @@ def test_model(policy_net, value_net):
         # switch_p = Categorical(masked_pi)
         # switch_a = switch_p.sample().item()
         
+        print(masked_pi)
         print("manually enter action: ")
         switch_a = int(input())
 
         next_state, reward, done = env.step(switch_a)
         node_feats, adj_mats, switch_mask = next_state
 
+        switch_log_pi, switch_pi, masked_pi = policy_net(
+            node_feats_torch, adj_mats_torch, switch_mask_torch)
+        
         print(masked_pi)
         print(switch_a, reward)
         print(values.detach().item())
