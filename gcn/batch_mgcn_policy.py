@@ -92,4 +92,11 @@ class Batch_MGCN_Policy(nn.Module):
         # deep into the final training stages)
         masked_pi = F.normalize(masked_pi, p=1, dim=1)
 
+        # # bug-fix
+        # # TODO: this is when masked_pi is all zeros because the 
+        # # last action mask is non-zero only for the action at index -1 
+        # # and pi at index -1 has an almost zero mass
+        # if ((masked_pi == 0).all()):
+        #     masked_pi[-1] = 1.0
+
         return log_pi, pi, masked_pi
