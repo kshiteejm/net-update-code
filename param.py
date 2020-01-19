@@ -61,5 +61,7 @@ parser.add_argument('--start_epoch', type=int, default=0,
                     help='intial epoch number (default: 0)')
 parser.add_argument('--heapq_size', type=int, default=32,
                     help='good stuff heapq size (default: 32)')
+parser.add_argument('--replay_weight', type=float, default=0.1,
+                    help='replay gradient update weight')
 
 config, _ = parser.parse_known_args()
