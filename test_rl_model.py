@@ -36,7 +36,7 @@ def test_model(policy_net, value_net):
         next_state, reward, done = env.step(switch_a)
         node_feats, adj_mats, switch_mask = next_state
 
-        print(masked_pi.detach().item())
+        print(masked_pi)
         print(switch_a, reward)
         print(values.detach().item())
 
