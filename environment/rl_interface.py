@@ -12,7 +12,7 @@ class RLEnv(object):
         assert(switch_idx == self.num_switches or \
                switch_idx in self.switches_to_update - self.intermediate_switches)
 
-        # None stands for current step done
+        # self.num_switches stands for current step done
         if switch_idx == self.num_switches:
             reward = self.get_reward(self.intermediate_switches)
             self.switches_to_update -= self.intermediate_switches
