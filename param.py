@@ -35,6 +35,8 @@ parser.add_argument('--batch_size', type=int, default=64,
                     help='batch size for policy gradient (default: 64)')
 parser.add_argument('--lr_rate', type=float, default=1e-3,
                     help='learning rate (default: 1e-3)')
+parser.add_argument('--lr_epochs', type=float, default=1000,
+                    help='learning rate scheduler epochs (default: 1000)')
 parser.add_argument('--num_epochs', type=int, default=10000,
                     help='number of trianing iterations (default: 10000)')
 parser.add_argument('--gamma', type=float, default=1,
@@ -61,7 +63,5 @@ parser.add_argument('--start_epoch', type=int, default=0,
                     help='intial epoch number (default: 0)')
 parser.add_argument('--heapq_size', type=int, default=32,
                     help='good stuff heapq size (default: 32)')
-parser.add_argument('--replay_weight', type=float, default=0.1,
-                    help='replay gradient update weight')
 
 config, _ = parser.parse_known_args()

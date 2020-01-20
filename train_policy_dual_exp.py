@@ -17,6 +17,7 @@ from gcn.batch_mgcn_value import Batch_MGCN_Value
 from torch.utils.tensorboard import SummaryWriter
 from gcn.batch_mgcn_policy import Batch_MGCN_Policy
 from utils.rewards import get_monitor_total_rewards
+from utils.lr_schedule import LinearLearnRateScheduler
 
 
 class Batch(object):
@@ -101,6 +102,14 @@ def main():
     policy_opt = torch.optim.Adam(policy_net.parameters(), lr=config.lr_rate)
     value_opt = torch.optim.Adam(value_net.parameters(), lr=config.lr_rate)
 
+    # lr schedulers
+    rl_exp_lr = LinearLearnRateScheduler(optimizers=[policy_opt, value_opt], 
+                                         lr_init=0.0, lr_final=config.lr_rate, 
+                                         lr_epochs=config.lr_epochs)
+    good_exp_lr = LinearLearnRateScheduler(optimizers=[policy_opt, value_opt], 
+                                           lr_init=config.lr_rate, lr_final=0.0, 
+                                           lr_epochs=config.lr_epochs)
+
     # trajectory generator
     traj_gen = TrajectoryGenerator()
 
@@ -157,6 +166,9 @@ def main():
             node_feats = next_node_feats
             adj_mats = next_adj_mats
             switch_mask = next_switch_mask
+
+        # configure rl learning rate
+        rl_exp_lr.set_rate(epoch - config.start_epoch)
 
         # torchify everything
         batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
@@ -217,6 +229,9 @@ def main():
             if ba >= config.batch_size:
                     break
 
+        # configure good exp learning rate
+        good_exp_lr.set_rate(epoch - config.start_epoch)
+
         # torchify everything
         batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
         batch_next_adj_mats_torch, batch_switch_masks_torch, batch_actions_torch, \
@@ -237,7 +252,7 @@ def main():
         # policy supervised learning
         log_pi, pi, masked_pi = policy_net(*batch_states_torch)
         masked_pi_acts = masked_pi.gather(1, batch_actions_torch)
-        loss = - torch.log(masked_pi_acts).mean() * config.replay_weight
+        loss = - torch.log(masked_pi_acts).mean()
         policy_opt.zero_grad()
         loss.backward()
         policy_opt.step()
