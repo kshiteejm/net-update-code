@@ -103,12 +103,12 @@ def main():
     value_opt = torch.optim.Adam(value_net.parameters(), lr=config.lr_rate)
 
     # lr schedulers
-    rl_exp_lr = LinearLearnRateScheduler(optimizers=[policy_opt, value_opt], 
-                                         lr_init=0.0, lr_final=config.lr_rate, 
-                                         lr_epochs=config.lr_epochs)
-    good_exp_lr = LinearLearnRateScheduler(optimizers=[policy_opt, value_opt], 
-                                           lr_init=config.lr_rate, lr_final=0.0, 
-                                           lr_epochs=config.lr_epochs)
+    rl_exp_lr_sched = LinearLearnRateScheduler(optimizers=[policy_opt, value_opt], 
+                                               lr_init=0.0, lr_final=config.lr_rate, 
+                                               lr_epochs=config.lr_epochs)
+    good_exp_lr_sched = LinearLearnRateScheduler(optimizers=[policy_opt, value_opt], 
+                                                 lr_init=config.lr_rate, lr_final=0.0, 
+                                                 lr_epochs=config.lr_epochs)
 
     # trajectory generator
     traj_gen = TrajectoryGenerator()
@@ -168,7 +168,7 @@ def main():
             switch_mask = next_switch_mask
 
         # configure rl learning rate
-        rl_exp_lr.set_rate(epoch - config.start_epoch)
+        rl_exp_lr = rl_exp_lr_sched.set_rate(epoch - config.start_epoch)
 
         # torchify everything
         batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
@@ -214,6 +214,7 @@ def main():
             entropy / - np.log(config.num_switches + 1), epoch)
         monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
         monitor.add_scalar('Time/elapsed', proj_progress.delta_time, epoch)
+        monitor.add_scalar('LearningRate/rl_exp_lr', rl_exp_lr, epoch)
 
         # do the good stuff training
         ba = 0
@@ -230,7 +231,7 @@ def main():
                     break
 
         # configure good exp learning rate
-        good_exp_lr.set_rate(epoch - config.start_epoch)
+        good_exp_lr = good_exp_lr_sched.set_rate(epoch - config.start_epoch)
 
         # torchify everything
         batch_node_feats_torch, batch_next_node_feats_torch, batch_adj_mats_torch, \
@@ -273,6 +274,7 @@ def main():
         monitor.add_scalar('Reward/good_stuff_average',
             np.mean([i for (i, _, _) in traj_store.pq]), epoch)
         monitor.add_scalar('Reward/good_stuff_size', len(traj_store.pq), epoch)
+        monitor.add_scalar('LearningRate/good_exp_lr', good_exp_lr, epoch)
 
         # save model, do testing
         if epoch % config.model_saving_interval == 0:
