@@ -84,6 +84,11 @@ def main():
         time.strftime('%Y-%m-%d-%H-%M-%S', time.gmtime()))
 
     manual_action_sequence = [4, 8, 12, 16, 0, 1, 20, 5, 9, 13, 17, 2, 3, 20, 20]
+    assert(config.batch_size == len(manual_action_sequence))
+    pi_action_store = np.zeros(config.batch_size)
+    values_store = np.zeros(config.batch_size)
+    returns_store = np.zeros(config.batch_size)
+    adv_store = np.zeros(config.batch_size)
 
     # perform training
     for epoch in range(config.start_epoch, config.num_epochs):
@@ -103,6 +108,7 @@ def main():
 
             print('ba: {}, pi: {}, action: {}, pi_action: {}'.format(ba, masked_pi, switch_a, 
                     masked_pi[0, switch_a]))
+            pi_action_store[ba] = masked_pi[0, switch_a].item()
 
             next_node_feats, next_adj_mats, \
                 next_switch_mask, reward, done = traj_gen.step(switch_a)
@@ -146,14 +152,14 @@ def main():
         returns = torch.from_numpy(returns_np)
 
         # policy gradient
-        adv = gae_advantage(batch_rewards, batch_dones, values_np,
+        adv_np = gae_advantage(batch_rewards, batch_dones, values_np,
             next_values_np, config.gamma, config.lam,
             norm=config.adv_norm)
-        adv = torch.from_numpy(adv)
+        adv = torch.from_numpy(adv_np)
 
-        print('Values: {}, returns: {}, adv: {}'.format(values_np, returns_np, adv))
-        import pdb
-        pdb.set_trace()
+        values_store[:] = values_np
+        returns_store[:] = returns_np
+        adv_store[:] = adv_np
         
         # value gradient
         pg_loss, entropy = policy_gradient(
@@ -173,24 +179,11 @@ def main():
 
         # monitor
         proj_progress.update_progress(epoch)
-        monitor_reward = get_monitor_total_rewards(batch_rewards, batch_dones)
-        monitor.add_scalar('Loss/pg_loss', pg_loss, epoch)
-        monitor.add_scalar('Loss/v_loss', v_loss, epoch)
-        monitor.add_scalar('Reward/avg_reward', np.mean(monitor_reward), epoch)
-        monitor.add_scalar('Reward/min_reward', min(monitor_reward), epoch)
-        monitor.add_scalar('Reward/max_reward', max(monitor_reward), epoch)
-        monitor.add_histogram('Reward/sum_rewards', np.array(monitor_reward), epoch)
-        monitor.add_scalar('Entropy/norm_entropy',
-            entropy / - np.log(config.num_switches + 1), epoch)
-        monitor.add_scalar('Entropy/entropy_factor', entropy_factor, epoch)
-        monitor.add_scalar('Time/elapsed', proj_progress.delta_time, epoch)
-
-        # save model, do testing
-        if epoch % config.model_saving_interval == 0:
-            torch.save(policy_net.state_dict(), config.result_folder +
-                'policy_net_epoch_{}'.format(epoch))
-            torch.save(value_net.state_dict(), config.result_folder +
-                'value_net_epoch_{}'.format(epoch))
+        for i in range(config.batch_size):
+            monitor.add_scalar('Policy/action_{}'.format(i), pi_action_store[i], epoch)
+            monitor.add_scalar('Value/values_{}'.format(i), values_store[i], epoch)
+            monitor.add_scalar('Returns/returns_{}'.format(i), returns_store[i], epoch)
+            monitor.add_scalar('Adv/advs_{}'.format(i), adv_store[i], epoch)
 
 
 if __name__ == '__main__':
