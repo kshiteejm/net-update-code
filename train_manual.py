@@ -88,7 +88,7 @@ def main():
     # perform training
     for epoch in range(config.start_epoch, config.num_epochs):
 
-        for ba in range(len(manual_action_sequence)):
+        for ba in range(config.batch_size):
             node_feats_torch, adj_mats_torch, switch_mask_torch = \
                 get_tensors(node_feats, adj_mats, switch_mask)
 
