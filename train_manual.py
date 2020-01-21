@@ -157,9 +157,9 @@ def main():
             norm=config.adv_norm)
         adv = torch.from_numpy(adv_np)
 
-        values_store[:] = values_np[0, :]
-        returns_store[:] = returns_np[0, :]
-        adv_store[:] = adv_np[0, :]
+        values_store[:] = values_np[:, 0]
+        returns_store[:] = returns_np[:, 0]
+        adv_store[:] = adv_np[:, 0]
         
         # value gradient
         pg_loss, entropy = policy_gradient(
