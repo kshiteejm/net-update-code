@@ -157,7 +157,7 @@ def main():
             norm=config.adv_norm)
         adv = torch.from_numpy(adv_np)
 
-        values_store[:] = values_np
+        values_store[:] = values_np[0, :]
         returns_store[:] = returns_np
         adv_store[:] = adv_np
         
