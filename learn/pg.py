@@ -1,15 +1,17 @@
 import torch
 import torch.nn.functional as F
 
-
 def policy_gradient(pi_nn, pi_opt, packed_states, actions,
                     adv, entropy_factor, pi_old=None):
 
     # feed forward policy network
-    log_pi, pi, masked_pi = pi_nn(*packed_states)
+    log_pi, pi, masked_log_pi, masked_pi = pi_nn(*packed_states)
 
-    # pick based on actions
-    log_pi_acts = log_pi.gather(1, actions)
+    # # pick based on actions
+    # log_pi_acts = log_pi.gather(1, actions)
+
+    # picked based on actions from masked_p
+    log_pi_acts = masked_log_pi.gather(1, actions)
 
     # importance sampling
     if pi_old is not None:

@@ -23,7 +23,7 @@ def test_model(policy_net, value_net):
         values = value_net(
             node_feats_torch, adj_mats_torch)
         
-        switch_log_pi, switch_pi, masked_pi = policy_net(
+        switch_log_pi, switch_pi, masked_log_pi, masked_pi = policy_net(
             node_feats_torch, adj_mats_torch, switch_mask_torch)
 
         # # sample action

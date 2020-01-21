@@ -47,7 +47,7 @@ class TestBatchPolicy(unittest.TestCase):
 
 
     def test_policy_feedforwarding(self):
-        switch_log_pi, switch_pi, masked_pi = self.mgcn_policy(
+        switch_log_pi, switch_pi, masked_log_pi, masked_pi = self.mgcn_policy(
             self.node_feats_torch, self.adj_mats_torch, self.switch_mask)
         assert(switch_log_pi.shape[0] == 32)  # batch_size
         assert(switch_log_pi.shape[1] == 21)  # num_switches + 1

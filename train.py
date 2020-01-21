@@ -91,7 +91,7 @@ def main():
                 get_tensors(node_feats, adj_mats, switch_mask)
 
             # feed forward policy net
-            switch_log_pi, switch_pi, masked_pi = policy_net(
+            switch_log_pi, switch_pi, masked_log_pi, masked_pi = policy_net(
                 node_feats_torch, adj_mats_torch, switch_mask_torch)
 
             # sample action

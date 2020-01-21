@@ -4,6 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 from gcn.batch_mgcn import BatchMGCN
 from gcn.layers import FullyConnectNN
+from utils.masking import masked_log_softmax
 
 
 class Batch_MGCN_Policy(nn.Module):
@@ -79,18 +80,22 @@ class Batch_MGCN_Policy(nn.Module):
         # invalid (mask = 0) entries should never be sampled
         # TODO: check this is true at policy gradient step
         log_pi = F.log_softmax(priority_values, dim=-1)
-
+        
         # get probability distributions
         pi = torch.exp(log_pi)
 
-        # zero out the entries based on masks
-        masked_pi = pi * mask
+        # modified masking 
+        masked_log_pi = masked_log_softmax(priority_values, mask, dim=-1)
+        masked_pi = torch.exp(masked_log_pi)
 
-        # re-normalization
-        # TODO: this step might sum over a bunch of near 0 entries
-        # need to make sure they don't mess things up (especially
-        # deep into the final training stages)
-        masked_pi = F.normalize(masked_pi, p=1, dim=1)
+        # zero out the entries based on masks
+        # masked_pi = pi * mask
+
+        # # re-normalization
+        # # TODO: this step might sum over a bunch of near 0 entries
+        # # need to make sure they don't mess things up (especially
+        # # deep into the final training stages)
+        # masked_pi = F.normalize(masked_pi, p=1, dim=1)
 
         # # bug-fix
         # # TODO: this is when masked_pi is all zeros because the 
@@ -99,4 +104,4 @@ class Batch_MGCN_Policy(nn.Module):
         # if ((masked_pi == 0).all()):
         #     masked_pi[-1] = 1.0
 
-        return log_pi, pi, masked_pi
+        return log_pi, pi, masked_log_pi, masked_pi
