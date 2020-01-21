@@ -251,7 +251,7 @@ def main():
         returns = torch.from_numpy(returns_np)
 
         # policy supervised learning
-        log_pi, pi, masked_pi = policy_net(*batch_states_torch)
+        log_pi, pi, masked_log_pi, masked_pi = policy_net(*batch_states_torch)
         masked_pi_acts = masked_pi.gather(1, batch_actions_torch)
         loss = - torch.log(masked_pi_acts).mean()
         policy_opt.zero_grad()
