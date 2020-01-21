@@ -101,7 +101,8 @@ def main():
 
             switch_a = manual_action_sequence[ba]
 
-            print('pi: {}, action: {}'.format(masked_pi, switch_a))
+            print('ba: {}, pi: {}, action: {}, pi_action: {}'.format(ba, masked_pi, switch_a, 
+                    masked_pi[0, switch_a]))
 
             next_node_feats, next_adj_mats, \
                 next_switch_mask, reward, done = traj_gen.step(switch_a)
