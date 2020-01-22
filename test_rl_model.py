@@ -30,6 +30,7 @@ def test_model(policy_net, value_net):
         # switch_p = Categorical(masked_pi)
         # switch_a = switch_p.sample().item()
         
+        print(switch_pi)
         print(masked_pi)
         print("manually enter action: ")
         switch_a = int(input())

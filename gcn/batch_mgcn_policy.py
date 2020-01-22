@@ -80,7 +80,7 @@ class Batch_MGCN_Policy(nn.Module):
         # invalid (mask = 0) entries should never be sampled
         # TODO: check this is true at policy gradient step
         log_pi = F.log_softmax(priority_values, dim=-1)
-        
+
         # get probability distributions
         pi = torch.exp(log_pi)
 
