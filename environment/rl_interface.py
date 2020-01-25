@@ -21,6 +21,7 @@ class RLEnv(object):
         else:
             assert not switch_idx in self.intermediate_switches
             self.intermediate_switches.add(switch_idx)
+            # self.switches_to_update -= set(switch_idx)
             reward = 0
 
         state = self.get_state()
