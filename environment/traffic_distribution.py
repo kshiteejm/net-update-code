@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 class TrafficDistribution:
-    def __init__(self, num_endpoints, total_traffic, endpoint_max):
+    def __init__(self, num_endpoints):
         self.num_endpoints = num_endpoints
 
     def uniform(self, mean_min=1250, mean_max=2500, spread=625):
