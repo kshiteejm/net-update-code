@@ -29,6 +29,8 @@ parser.add_argument('--n_steps', type=int, default=8,
                     help='number of message passing steps (default: 8)')
 parser.add_argument('--repeat_exp', type=int, default=0,
                     help='repeat the same setup (default: 0)')
+parser.add_argument('--dense_reward', type=int, default=0,
+                    help='provide intermediate reward every step (default: 0)')
 
 # -- Learning --
 parser.add_argument('--batch_size', type=int, default=64,

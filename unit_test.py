@@ -10,6 +10,7 @@ from gcn.unit_test.test_param import TestParams
 from environment.unit_test.test_env import TestEnv
 from utils.unit_test.test_rewards import TestRewards
 from environment.unit_test.test_dcn_env import TestDCNEnv
+from environment.unit_test.test_reward import TestDenseReward
 from environment.unit_test.test_traffic_matric import TestTrafficMatrix
 
 

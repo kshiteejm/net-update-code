@@ -12,17 +12,32 @@ class RLEnv(object):
         assert(switch_idx == self.num_switches or \
                switch_idx in self.switches_to_update - self.intermediate_switches)
 
-        # self.num_switches stands for current step done
-        if switch_idx == self.num_switches:
-            reward = self.get_reward(self.intermediate_switches)
-            self.switches_to_update -= self.intermediate_switches
-            self.num_steps -= 1
-            self.intermediate_switches = set()
-        else:
-            assert not switch_idx in self.intermediate_switches
+        if config.dense_reward:
+            # update the state at every step
+            self.switches_to_update -= set([switch_idx])
             self.intermediate_switches.add(switch_idx)
-            # self.switches_to_update -= set(switch_idx)
-            reward = 0
+            # get dense reward
+            curr_reward = self.get_reward(self.intermediate_switches)
+            # get reward difference w.r.t. the last step
+            reward = curr_reward - self.last_reward
+            self.last_reward = curr_reward
+            # terminal action
+            if switch_idx == self.num_switches:
+                self.num_steps -= 1
+                self.intermediate_switches = set()
+                self.last_reward = 0  # reset last reward, go to next update batch
+        else:
+            # self.num_switches stands for current step done
+            if switch_idx == self.num_switches:
+                reward = self.get_reward(self.intermediate_switches)
+                self.switches_to_update -= self.intermediate_switches
+                self.num_steps -= 1
+                self.intermediate_switches = set()
+            else:
+                assert not switch_idx in self.intermediate_switches
+                self.intermediate_switches.add(switch_idx)
+                # self.switches_to_update -= set([switch_idx])
+                reward = 0
 
         state = self.get_state()
 
@@ -50,6 +65,8 @@ class RLEnv(object):
         self.num_switches = self.dcn_environment.get_total_switches()
         # tuple(sorted(down_switch_idx_set)) -> cost
         # self.cost_model = self.dcn_environment.get_cost_model()
+        # to compute dense reward
+        self.last_reward = 0
         state = self.get_state()
         return state
 
